@@ -30,7 +30,7 @@ export function configure(m){
   if(m.cga){if(m.state.mesh!==undefined)m.state.mesh=true;if(m.state.radius!==undefined)m.state.radius=false;}
   if(t==='roundpoint')m.names=['a'];
   if(t==='round'&&m.def.grade===4)m.names=['p','q','r','t'];
-  if(cgaTypes.includes(t)){m.controls=[];fill(m,check('mesh','Null cone / Horosphere',true));if(t==='cga-dot'){m.setVectors(2,'null');m.names=['a','b'];fill(m,range('radiusA','r_a²',-2,2,.025,0));fill(m,range('radiusB','r_b²',-2,2,.025,0));}
+  if(cgaTypes.includes(t)){m.controls=[];fill(m,check('mesh','Null cone / Horosphere',true));if(t==='cga-dot'){m.setVectors(2,'null');m.names=['a','b'];fill(m,range('radiusA','Radius² · a',-2,2,.025,0));fill(m,range('radiusB','Radius² · b',-2,2,.025,0));}
     else{fill(m,select('pair','Objects',cgaPairs(n,t)));fill(m,check('flatA','Make first object flat'));fill(m,check('flatB','Make second object flat'));fill(m,check('spatial','u = 0 geometry',true));fill(m,check('dual','Antidual',t==='cga-expansion'));fill(m,check('homogeneous','Homogeneous blades'));setPair(m);}}
   if(m.alg.kind==='rigid'){fill(m,check('unitWeight',`Unitize (${n===3?'z':'w'} = 1)`));fill(m,check('lockWeight','Keep on unit slice'));}
 }
@@ -132,7 +132,7 @@ function paintFlat(m,scene){
   }
   if(t==='distance'){
     inputs(m,scene);const k=+s.case+1,x=vec(0),y=A.blade(vs.slice(1,k+1)),yn=k===1?'q':name(k),attx=A.attitude(x),atty=A.attitude(y),attjoin=A.attitude(A.wedge(x,y));flat(scene,m,x,'p',colors.a,s.homogeneous);flat(scene,m,y,yn,colors.b,s.homogeneous);
-    const p=affine(vs[0]),q=k===1?affine(vs[1]):closestPoint(vs[0],y,A);if(p&&q){scene.line(p,q,colors.warm,2,true);if(k>1)scene.point(q,hat(`proj(p, ${yn})`),colors.warm);scene.label(scale(add(p,q),.5),'d',colors.warm,{dy:-10});}
+    const p=affine(vs[0]),q=k===1?affine(vs[1]):closestPoint(vs[0],y,A);if(p&&q){scene.line(p,q,colors.warm,2,true);if(k>1)scene.point(q,hat(`proj(p, ${yn})`),colors.warm);scene.label(scale(add(p,q),.5),'d',colors.warm,{dy:-10,scalar:true});}
     scene.element(attx,A,'att(p)',{color:colors.a,dashed:true});scene.element(atty,A,`att(${yn})`,{color:colors.b,dashed:true});scene.element(attjoin,A,`att(p ∧ ${yn})`,{color:colors.warm,dashed:true});
     const numerator=A.bulkNorm(attjoin),denominator=A.bulkNorm(A.wedge(attx,atty)),w=A.weightNorm(A.wedge(x,atty));m.formula=`d(${V('p')}, ${V(yn)}) = ‖att(${V('p')} ∧ ${V(yn)})‖<sub>●</sub> / ‖att(${V('p')}) ∧ att(${V(yn)})‖<sub>●</sub>`;m.row('Homogeneous distance',`${number(numerator)} 1 + ${number(w)} 𝟙`);m.row('Distance',denominator>EPS?number(numerator/denominator):'Undefined');return true;
   }
@@ -190,6 +190,7 @@ function paintConformal(m,scene){
   const t=m.def.type,A=m.alg,n=m.n,s=m.state,vs=m.vectors;if(!m.cga)return false;
   if(t==='roundpoint'||t==='round'){
     inputs(m,scene);let u=t==='roundpoint'?A.vector(vs[0]):A.blade(s.flat?[...vs.slice(0,-1),basis(n,n-1)]:vs),label=t==='roundpoint'?'a':objectSymbol(A.gradeOf(u),s.flat),info=cgaRound(u,A),prop=cgaProperties(u,A);
+    if(t==='roundpoint'){m.formula=`${V('a')} / a<sub>${n===4?'z':'w'}</sub> = ${V('x')} + ${E(n-1)} + ½(|${V('x')}|² + r²)${E(n)}`;if(Math.abs(vs[0][n-2])<EPS)m.status=length(vs[0].slice(0,n-2))<EPS&&Math.abs(vs[0][n-1])>EPS?'Point at infinity':'Zero round weight · no finite centre';}
     if(t==='round')m.formula=`${V(label)} = ${m.names.slice(0,s.flat?-1:undefined).map(V).join(' ∧ ')}${s.flat?` ∧ ${E(n)}`:''}`;
     if(t==='roundpoint'){if(s.radius&&info&&!info.flat){const r=Math.sqrt(Math.abs(info.radius2));scene.line(info.center,add(info.center,basis(n,0,r)),colors.result,2.3);}}
     else{spatialRound(scene,u,A,hat(label),colors.result,{radius:s.radius});embeddedRound(scene,u,A,label,colors.result);}

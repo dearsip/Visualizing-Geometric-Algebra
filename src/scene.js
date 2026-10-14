@@ -133,7 +133,7 @@ export class Scene {
     const center=basis(this.n,w);this.disk(center,[basis(this.n,0),basis(this.n,u)],2.7,'#c3af52',.03,true);
     if(section){this.label(point([1.8],1.8),'Null Cone',colors.green,{dx:7,dy:-15,size:17});this.label(point([-1.5]),'Horosphere',colors.purple,{dx:-12,dy:-15,size:17});}
   }
-  angle(a,b){if(length(a)<EPS||length(b)<EPS)return;const u=unit(a);let v=sub(unit(b),scale(u,dot(u,unit(b))));if(length(v)<EPS)return;v=unit(v);const theta=Math.acos(Math.max(-1,Math.min(1,dot(unit(a),unit(b)))));let prev=scale(u,.45);for(let i=1;i<=24;i++){const t=theta*i/24,p=add(scale(u,.45*Math.cos(t)),scale(v,.45*Math.sin(t)));this.line(prev,p,colors.ink,1.5);prev=p;}}
+  angle(a,b){if(length(a)<EPS||length(b)<EPS)return;const u=unit(a);let v=sub(unit(b),scale(u,dot(u,unit(b))));if(length(v)<EPS){if(dot(unit(a),unit(b))>=0)return;const candidates=this.orthonormal(Array.from({length:this.n},(_,i)=>sub(basis(this.n,i),scale(u,u[i]))));v=candidates[0];if(this.view){const o=this.project(Z(this.n)),q=this.project(u),area=d=>{const p=this.project(d);return Math.abs((q.x-o.x)*(p.y-o.y)-(q.y-o.y)*(p.x-o.x));};v=candidates.reduce((best,d)=>area(d)>area(best)?d:best,v);}}v=unit(v);const theta=Math.acos(Math.max(-1,Math.min(1,dot(unit(a),unit(b)))));let prev=scale(u,.45);for(let i=1;i<=24;i++){const t=theta*i/24,p=add(scale(u,.45*Math.cos(t)),scale(v,.45*Math.sin(t)));this.line(prev,p,colors.ink,1.5);prev=p;}}
   render(){
     const rect=this.canvas.getBoundingClientRect();if(!rect.width||!rect.height)return;
     const ratio=Math.min(window.devicePixelRatio||1,2);this.w=rect.width;this.h=rect.height;this.s=Math.min(this.w/7.8,this.h/6.6)*this.view.zoom;
@@ -159,9 +159,9 @@ export class Scene {
     // Place labels with small collision avoidance; never let labels run out of the frame.
     const occupied=[];
     for(const item of this.labels){const p=this.project(item.p);if(!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x< -80||p.x>this.w+80||p.y< -80||p.y>this.h+80)continue;const size=Math.max(16,item.size||18);
-      const width=measureMath(ctx,item.text,size);let x=Math.min(this.w-width-12,Math.max(8,p.x+(item.dx||0))),y=Math.min(this.h-25,Math.max(22,p.y+(item.dy||0)));
-      for(let t=0;t<5&&occupied.some(b=>x<b.x+b.w&&x+width>b.x&&Math.abs(y-b.y)<20);t++)y=Math.max(22,y-22);
-      occupied.push({x,y,w:width});drawMath(ctx,item.text,x,y,size,item.color);
+      const width=measureMath(ctx,item.text,size,!item.scalar);let x=Math.min(this.w-width-12,Math.max(8,p.x+(item.dx||0))),y=Math.min(this.h-25,Math.max(28,p.y+(item.dy||0)));
+      for(let t=0;t<5&&occupied.some(b=>x<b.x+b.w&&x+width>b.x&&Math.abs(y-b.y)<20);t++)y=Math.max(28,y-22);
+      occupied.push({x,y,w:width});drawMath(ctx,item.text,x,y,size,item.color,!item.scalar);
     }
   }
   orientationColor(ps){let area=0;for(let i=0;i<ps.length;i++)area+=ps[i].x*ps[(i+1)%ps.length].y-ps[(i+1)%ps.length].x*ps[i].y;return area<0?colors.warm:colors.cool;}
@@ -172,7 +172,7 @@ export class Scene {
     e.preventDefault();this.canvas.focus({preventScroll:true});this.activate();try{this.canvas.setPointerCapture(e.pointerId);}catch{}const p=this.pos(e);this.pointers.set(e.pointerId,p);
     if(this.pointers.size>=2){this.gesture='two';this.pair=this.pairState();this.gestureView={...this.view};this.drag=null;return;}
     const near=this.handles.map(h=>({...h,p:this.project(h.v)})).sort((a,b)=>Math.hypot(a.p.x-p.x,a.p.y-p.y)-Math.hypot(b.p.x-p.x,b.p.y-p.y))[0];
-    const handle=near&&Math.hypot(near.p.x-p.x,near.p.y-p.y)<18?near:null;
+    const handle=near&&Math.hypot(near.p.x-p.x,near.p.y-p.y)<(e.pointerType==='touch'?28:18)?near:null;
     this.gesture='one';this.drag={p,handle,button:e.button,shift:e.shiftKey};this.canvas.classList.add('dragging');
   }
   pairState(){const [a,b]=[...this.pointers.values()];return {x:(a.x+b.x)/2,y:(a.y+b.y)/2,d:Math.hypot(a.x-b.x,a.y-b.y)};}
