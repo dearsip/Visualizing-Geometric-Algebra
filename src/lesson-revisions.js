@@ -86,7 +86,7 @@ export function paint(m,scene){
     const x=A.lc(vec(0)),y=A.lc(vec(1)),wx=A.rc(x),wy=A.rc(y),out=t==='antiwedge'?A.antiwedge(x,y):A.agp(x,y),xn=t==='antiwedge'?'a':'g',yn=t==='antiwedge'?'b':'h';if(s.complements!==false)inputs(m,scene,[0,1],[rc(xn),rc(yn)]);
     if(s.inputs!==false){scene.element(x,A,xn,{color:colors.a,alpha:.13});scene.element(y,A,yn,{color:colors.b,alpha:.13});if(n===3){scene.locusPlane(zero(n),vs[0],colors.a);scene.locusPlane(zero(n),vs[1],colors.b);}}
     const w=A.wedge(wx,wy);if(s.intermediate!==false)scene.element(w,A,`${rc(xn)} ∧ ${rc(yn)}`,{dashed:true,color:colors.purple,alpha:.09});if(s.result!==false)scene.element(t==='antiwedge'?out:A.grade(out,n-2),A,`${xn} ${t==='antiwedge'?'∨':'⟇'} ${yn}`,{color:colors.result});
-    if(t==='geometric-antiproduct'&&s.loci){scene.locusLine(vs[1],vs[0],colors.a);scene.locusPlane(vs[1],A.coordinates(A.metricMap(vec(0))),colors.purple);scene.angle(vs[0],vs[1]);}
+    if(t==='geometric-antiproduct'&&s.loci){scene.locusLine(vs[1],vs[0],colors.a);scene.locusPlane(vs[1],A.coordinates(A.metricMap(vec(0))),colors.purple);scene.angle(A.coordinates(A.metricMap(vec(0))),A.coordinates(A.metricMap(vec(1))));}
     if(A.kind==='rigid'){flat(scene,m,x,xn,colors.a);flat(scene,m,y,yn,colors.b);flat(scene,m,A.grade(out,n-2),`${xn} ∨ ${yn}`,colors.result);}
     m.row(`${xn} ${t==='antiwedge'?'∨':'⟇'} ${yn}`,m.mv(out));return true;
   }
@@ -168,7 +168,7 @@ function paintSandwich(m,scene){
   const A=m.alg,n=m.n,h=n-1,s=m.state,vs=m.vectors,av=A.vector(vs[0]),v0=A.vector(vs[1]),anti=m.def.type==='isometry',minus=anti?A.antiReflect(v0,av):A.reflect(v0,av);inputs(m,scene);
   if(!minus){m.status='a⁻¹ undefined';return true;}const out=scale(minus,-1),v1=A.coordinates(out),g=A.lc(av),p0=affine(vs[1]),p1=affine(v1);scene.arrow(v1,'v₁',colors.result);scene.line(vs[1],v1,colors.mesh,1.4,true);flat(scene,m,v0,'v₀',colors.a);flat(scene,m,out,'v₁',colors.result);if(p0&&p1)scene.line(p0,p1,colors.result,1.5,true);
   if(!anti){
-    scene.blade([vs[0],vs[1]],'a ⟑ v₀',{color:colors.a,alpha:.13});scene.blade([v1,vs[0]],'v₁ ⟑ a = a ⟑ v₀',{color:colors.result,alpha:.13});const normal=A.coordinates(A.metricMap(av));if(s.dotLocus)scene.locusPlane(vs[1],normal,colors.purple);if(s.wedgeLocus){scene.locusLine(vs[1],vs[0],colors.a);scene.locusLine(v1,vs[0],colors.result);}scene.angle(vs[0],vs[1]);
+    scene.blade([vs[0],vs[1]],'a ⟑ v₀',{color:colors.a,alpha:.13});scene.blade([v1,vs[0]],'v₁ ⟑ a = a ⟑ v₀',{color:colors.result,alpha:.13});const normal=A.coordinates(A.metricMap(av));if(s.dotLocus)scene.locusPlane(vs[1],normal,colors.purple);if(s.wedgeLocus){scene.locusLine(vs[1],vs[0],colors.a);scene.locusLine(v1,vs[0],colors.result);}scene.angle(normal,A.coordinates(A.metricMap(v0)));
     const eu=new Algebra(n),fixed=eu.lc(eu.vector(normal));scene.flat(fixed,A,'fixed points',colors.green);const fixedPoint=affine(vs[0]);if(fixedPoint)scene.point(fixedPoint,hat('a'),colors.green);
     const q=A.inner(av,av);if(q>EPS){const infNormal=basis(n,h);for(let i=0;i<h;i++)infNormal[i]=-2*vs[0][h]*vs[0][i]/q;scene.flat(eu.lc(eu.vector(infNormal)),A,'sent to infinity',colors.purple);}
     if(s.orbit)projectiveSurface(scene,vs[0],vs[1]);
