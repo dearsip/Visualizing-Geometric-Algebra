@@ -63,7 +63,7 @@ export class Scene {
         const o=add(origin,offset);let ps=[o,add(o,vectors[i]),add(o,add(vectors[i],vectors[j])),add(o,vectors[j])];
         const orientation=(i+j-1+mask.toString(2).replace(/0/g,'').length)%2;
         if(orientation)ps=ps.reverse();
-        this.poly(ps,color,alpha/Math.max(1,k-1),dashed);
+        this.poly(ps,null,alpha/Math.max(1,k-1),dashed);
       }
     }
     const center=add(origin,scale(sum(vectors,this.n),.5));this.label(center,text,color||colors.ink,{dx:5,dy:-4,box:true});
