@@ -106,7 +106,7 @@ export class Algebra {
   weight(a) { return sub(a, this.bulk(a)); }
   inner(a, b) { return dot(a, this.metricMap(b)); }
   antiInner(a, b) { return dot(a, this.antiMetricMap(b)); }
-  attitude(a) { return this.antiwedge(a, this.vector(basis(this.n, this.n - 1))); }
+  attitude(a) { return this.antiwedge(a, this.rc(this.vector(basis(this.n, this.n - 1)))); }
   coefficientNorm(a) { return length(a); }
   bulkNorm(a) { return length(this.bulk(a)); }
   weightNorm(a) { return length(this.weight(a)); }

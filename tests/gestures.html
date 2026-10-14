@@ -1,0 +1,32 @@
+<!doctype html><html lang="ja"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><link rel="stylesheet" href="/styles.css"><title>Local gesture verification</title>
+<main><h1>Gesture verification</h1><p>Local development checks using actual canvas event listeners. ブラウザ上の入力処理を検証する。</p><button id="run">Run input checks</button><pre id="results">Ready</pre><canvas id="canvas" class="scene-canvas" tabindex="0" style="width:100%;height:380px"></canvas></main>
+<script type="module">
+import { Scene } from '/src/scene.js';
+import { defaultView } from '/src/camera.js';
+import { basis } from '/src/algebra.js';
+const canvas=document.querySelector('canvas'),out=document.querySelector('pre');
+let point=basis(4,0,1),moved=0;const scene=new Scene(canvas,4,s=>s.handle(point,'a',0),(i,next)=>{point=next;moved++;});
+const event=(type,id,x,y,pointerType='touch',extra={})=>{const r=canvas.getBoundingClientRect();const e=new PointerEvent(type,{pointerId:id,pointerType,clientX:r.left+x,clientY:r.top+y,button:0,buttons:1,bubbles:true,cancelable:true,...extra});canvas.dispatchEvent(e);return e;};
+const check=(truth,label)=>{if(!truth)throw Error(label);return 'PASS '+label;};
+document.querySelector('#run').addEventListener('click',()=>{const results=[];try{
+ scene.up({});scene.view=defaultView(4);scene.activate(false);scene.render();
+ const wheel=()=>{const e=new WheelEvent('wheel',{deltaY:-100,bubbles:true,cancelable:true});canvas.dispatchEvent(e);return e;};
+ const zoom=scene.view.zoom;results.push(check(!wheel().defaultPrevented&&scene.view.zoom===zoom,'inactive wheel passes through'));
+ event('pointerdown',1,30,180);results.push(check(scene.pointers.size===0,'inactive touch passes through for page scrolling'));
+ canvas.dispatchEvent(new MouseEvent('click',{bubbles:true}));results.push(check(scene.engaged,'tap/click activates'));
+ results.push(check(wheel().defaultPrevented&&scene.view.zoom>zoom,'active wheel zooms'));
+ event('pointerdown',1,30,180);event('pointermove',1,55,205);event('pointerup',1,55,205);results.push(check(scene.view.yaw<.42&&scene.view.pitch>.58,'one finger behaves as left orbit'));
+ scene.view=defaultView(4);scene.view.extra=.4;scene.render();const yaw=scene.view.yaw,pitch=scene.view.pitch;
+ event('pointerdown',11,40,220);event('pointerdown',12,160,220);const gestureZoom=scene.view.zoom;
+ event('pointermove',11,20,195);event('pointermove',12,180,195);results.push(check(scene.view.extra>.4&&scene.view.zoom>gestureZoom&&scene.view.yaw===yaw&&scene.view.pitch===pitch,'two finger fold and pinch do not trigger left orbit'));
+ event('pointerup',12,180,195);const before=JSON.stringify(scene.view),beforeMoves=moved;event('pointermove',11,65,260);results.push(check(JSON.stringify(scene.view)===before&&moved===beforeMoves,'remaining finger is suspended'));
+ event('pointercancel',11,65,260);results.push(check(scene.pointers.size===0&&!scene.drag,'pointer cancel clears gesture'));
+ scene.view=defaultView(4);scene.render();const handle=scene.project(point);event('pointerdown',1,handle.x,handle.y);event('pointerdown',2,handle.x+90,handle.y);const moves=moved;event('pointermove',1,handle.x,handle.y-25);event('pointermove',2,handle.x+90,handle.y-25);results.push(check(moved===moves,'second finger cancels handle dragging'));
+ scene.up({});scene.isCGA=true;scene.view=defaultView(5,true);scene.n=5;point=basis(5,0);scene.render();const beta=scene.view.conformal;
+ event('pointerdown',1,20,180);event('pointerdown',2,110,180);event('pointermove',1,50,150);event('pointermove',2,140,150);results.push(check(scene.view.conformal>beta,'CGA two-finger horizontal exchange'));
+ scene.up({});scene.n=3;scene.isCGA=false;point=basis(3,0);scene.view=defaultView(3);scene.render();const view=JSON.stringify(scene.view);event('pointerdown',4,30,220,'mouse',{button:2});event('pointermove',4,70,180,'mouse',{button:2});event('pointerup',4,70,180,'mouse',{button:2});results.push(check(JSON.stringify(scene.view)===view,'3D right background drag has no orbit'));
+ canvas.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));results.push(check(!scene.engaged&&scene.pointers.size===0,'Escape releases zoom and gestures'));
+ results.push(check(getComputedStyle(canvas).touchAction==='pan-y','released touch permits page scrolling'));
+ out.textContent=results.join('\n')+'\n'+results.length+' / '+results.length+' passed';out.dataset.passed=results.length;
+ }catch(e){out.textContent=results.join('\n')+'\nFAIL '+e.message;out.dataset.failed='true';}});
+</script></html>

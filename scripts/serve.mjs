@@ -6,6 +6,7 @@ const mime = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; cha
 const server = http.createServer(async (req, res) => {
   try {
     const name = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
+    if(name==='/__qa__/gestures.html'){res.writeHead(200,{'Content-Type':'text/html; charset=utf-8'});res.end(await readFile(path.resolve(root,'../tests/gestures.html')));return;}
     let file = path.resolve(root, '.' + name);
     if (file !== root && !file.startsWith(root + path.sep)) throw new Error('Invalid path');
     if ((await stat(file)).isDirectory()) file = path.join(file, 'index.html');

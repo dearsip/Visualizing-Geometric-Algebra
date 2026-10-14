@@ -2,64 +2,51 @@
 
 ## Conventions
 
-本文の長い再掲、原図の転載、実装技術の解説は行わず、操作する図と短い日英コメントで構成。
+図と短い日英コメントを中心に構成する。本書の本文・原図は転載しない。
 
-- Algebraic element、vector、basis elementは太字。数値係数はscalar。
-- Scalar basis elementは太字の **1**、Antiscalarは𝟙。体積elementはe₁ ∧ … ∧ eₙの向きに固定。
-- Geometric product: ⟑ (U+27D1)、Geometric antiproduct: ⟇ (U+27C7)。Unicodeを保持し、CSSの字形で表示を補う。
-- Exterior Algebraは計量非依存。前置きのEuclidean Geometric Algebraではg = identity。Flat Geometryではg = diag(1, …, 1, 0)。CGAは空間方向の対角成分1、追加二軸の自己積0、交差積−1。
-- 3D/4Dはalgebraの次元。RGAではそれぞれ2D/3D Flat Geometry。CGAでは2D/3D Round Geometryに対応する4D/5D algebraを表示。
-- e₁が右、e₂が前、e₃が上。e₄は手前から、右ドラッグで上に回す。高次元は3Dへの線形射影とOrbitによって表示。
-- Bivectorは平行四辺形。向きの反転で暖色／寒色を交換。Trivector以上は内向きのboundary windingを使う。ラベルはvectorの先端、bladeの領域の中心。
-- 依存するfactor・locusは点線。高gradeのfactorは直交frameを使い、factorの積の大きさを維持する。射影で重なる面には可視性の限界がある。
-- Scalarの表示用半径は|coefficient|^(1/3)に比例。符号は数値欄で示す。これは可視化の便宜であり、scalarに空間的広がりがあるという定義ではない。
+- Algebraic elementとbasis elementは太字、数値係数はscalar。Geometric productは⟑ (U+27D1)、antiproductは⟇ (U+27C7)。STIX Two Mathを同梱して字形を表示する。
+- Exterior Algebraの演算は計量非依存。前置きのEuclidean Geometric Algebraはidentity metric。RGAはdiag(1,…,1,0)。CGAはspatial directionsの自己積1、追加二軸の自己積0、交差積−1。
+- 2D Flatは3D algebra、3D Flatは4D algebra。2D Roundは4D algebra、3D Roundは5D algebra。存在しない次元の図を数合わせで作らない。
+- e1は右、e2は前（視点から遠ざかる向き）、e3は上。3D左回転はe3を上に保つ。4Dではe4の表示方向を左回転から独立させる。追加軸のfoldとCGAの交換角は0–90°。
+- 高次元から3Dへの線形射影と、3DカメラのPerspective / Orthographicは別の設定。
+- Bivectorのfillは向きで暖色／寒色を使い分け、family colorは辺に使う。Grade≥3は一番奥の面の向きに色を揃え、向きの曲線矢印は原点側の面だけに描く。3Dへ潰れる4D Antiscalarは、固定したambient basisの向きで色を区別する。
+- Vectorのラベルは先端、bladeは中心。幾何学的なunit-slice表示にはhatを付ける。Bulk / Weightの丸やDualの星は下付き／上付きで組む。
+- Complementは連続する直交frameを使う。一般のbladeのscaleはfactorに均等配分する。Lineの分解では意味のある正規化したdirectionを使う。
+- Scalarの表示半径は|coefficient|^(1/3)に比例する。空間的な広がりをscalarの定義に加えるものではない。
 
-## Mathematical adjustments and cautions
+## Mathematical choices
 
-1. Constant-product locus / 積を一定に保つ軌跡と呼ぶ。Wedgeのvector pairには直線、trivectorには平面が対応する。
-2. 分配法則のLHS / RHSを切り替えても同じelementなので符号は変わらない。Anticommutativityの順序切り替えで符号を変える。
-3. 非零Euclidean vectorにはa⁻¹ = a/(a·a)がある。a·b = 0でも成立する。RGAのnull vectorには一般にこのinverseがない。
-4. u ∧ rightComplement(u) = 𝟙という定義はbasis elementに対して成立。線形に拡張した一般のuでは、標準のcoefficient normを使って‖u‖²𝟙となる。Complementをinverseと混同しない。
-5. RGA lineのBulkはmoment、Weightはdirection。PointのBulkはposition、Weightはhomogeneous weight。PlaneのBulkはoffset、Weightはnormal。
-6. Horizonは正負の方向を同一視する。表示用の境界の円・球は視野を切り取る便宜上のもの。有限なunit sliceの境界点を無限遠点とは同一視しない。
-7. att(u)とHorizonとの交わりは区別する。Pointのattitudeはscalar、Line/PlaneのHorizon intersectionは低gradeのdirection element。
-8. 前置きのReflectionはv₁ = −a ⟑ v₀ ⟑ a⁻¹を採用。これはaのcomplementを鏡映面とする。Figure 3.2の符号をそのまま使ったものではなく、対応する−v₁も描く。
-9. Complement-conjugated sandwichを説明用にSandwich Antiproductと呼ぶ。g = leftComplement(a)とすると、−g ⟇ v₀ ⟇ g/(a • a)と一致する。本書にもsandwich antiproductという表現があり、独立した新しい積として定義する必要はない。
-10. MotorはScrew motionで補間。Flectorは一つの固定ReflectionとMotorに分け、Reflectionから目的のFlectorまで補間する。det = −1の変換をidentityから連続なisometryで結ぶことはできない。
-11. 本書はHorosphereという名称を使う。Null coneとの交わりで、origin axisの係数が1のslice。2D版ではz = 1、3D版ではw = 1。
-12. Round point (4.28)は無限遠成分に½(|x|² + r²)。unit weightではa • a = −r²。実のSphereを表すdual vectorの符号と取り違えない。
-13. CGAのaxis表示の長さ1/√2と√2は、metric normではなく描画上の長さ。Null cone / Horosphereは断面をサンプリングしたmeshで示す。
-14. 図中のImaginaryは位置と|r|を表す補助表示。実の交点として描くものではない。
+1. 積を一定に保つ軌跡をConstant-product locusと呼ぶ。Wedgeのvector pairは相手に平行な線。Trivectorの図はlocus / Fix valueを置かない。
+2. Distributivityの両辺は同じelementなので、切り替えで符号を変えない。順序の交換では向きを反転する。
+3. 非零Euclidean vectorはa/(a·a)をinverseに持つ。a·b=0の場合も成り立つ。RGAでは純粋なprojective-axis vectorのinverseは存在しない。
+4. Complementはbasis elementの定義を線形に拡張する。一般のuでu∧RC(u)はcoefficient normの二乗×𝟙となり、常に𝟙とは限らない。
+5. RGA PointのBulkはposition、Weightはhomogeneous weight。Lineはmoment / direction、Planeはoffset / normal。Lineのbulkはunit direction∧(−weighted support)、weightはprojective axis∧directionとして描く。
+6. Attitudeはu∨RC(e_n)。Pointではscalar、Lineではdirection vector、Planeではdirection bivectorとなる。境界の円・球は無限遠の方向と有限な表示範囲を描くために使い、有限の境界点を無限遠点と同一視しない。
+7. Euclidean Reflectionの表示はv1=a⟑v0⟑a⁻¹。これはaを軸とするReflection。−v1がcomplementを鏡映面とするReflection。二つのReflectionによるRotationもこの符号で統一する。
+8. RGA Sandwichも全体をnegateしない。Complementを介するSandwichはLC(a⟑RC(v0)⟑a⁻¹)で、g=LC(a)によるg⟇v0⟇g/(a•a)と一致する。unit sliceの代表を取り直すとEuclidean Reflectionになる。
+9. Projective Sandwichの補助面は、|x|²−k(w−a_h(a_bulk·x)/|a_bulk|²)²=0という不変quadricの断面。v0、v1のhomogeneous weightとunit sliceに描く。Euclidean Reflectionでは鏡映面から等距離の平面を描く。
+10. Motor / Flectorは2Dでも成立する。2D Motorは回転／平行移動、Flectorは鏡映／映進。Motorをscrew motionで補間し、Flectorは固定ReflectionとMotorに分けて補間する。det=−1の変換をidentityから連続なisometryで結ぶことはできない。
+11. Angleは同gradeならsigned contractionを使い、違うgradeならそのbulk normを使う。Parametric formはp(α)=hat(sup(u))+att(u)∨α★。Parameterのgradeはobject grade−2。
+12. 本書の名称はHorosphere。Null coneのunit-origin-axis断面を描く。Round pointはInfinity係数に½(|x|²+r²)を使い、unit weightで自己dotは−r²。
+13. CGAの追加軸の表示長1/√2と√2はmetric normとは違う。Null coneの断面、直交するspatial parabola、Horosphereのcoarse meshを描く。
+14. Round objectはHorosphere上の形とu=0の形を両方表示する。Dipoleの両端、Circleのellipse、Sphereのellipsoid、Flat objectのparabolic sectionを実際のnull embeddingで計算する。Imaginaryの場合は実のHorosphere交点を描かず、中心と|r|を補助表示する。
 
-## Current pages
+## Contents
 
-| Page | Figures |
-| --- | --- |
-| Wedge Product | Vector pair, distributivity, trivector; constant-product constraints |
-| Basis & Complements | Basis sequence; right/left complement; antiwedge construction |
-| Geometric Product | Wedge+dot loci; reflection; rotation of vectors/blades; reverse and multiplication table |
-| Homogeneous Coordinates | Point; line; plane in 4D / whole flat space in 3D; bulk/weight; horizon |
-| Join, Meet & Attitude | Join; meet; attitude and horizon intersection |
-| Dot Products & Norms | Bulk dot; weight antidot on antivectors; homogeneous/projected norms |
-| Distance & Duals | Point–point/line/plane distance; metric duals; expansion/contraction definitions |
-| Four Projection pages | Orthogonal/central projection/antiprojection; all three cases in 4D; dual and two products |
-| Sandwich & Isometry | Projective sandwich; complementary isometry; 2–6 reflections and motor/flector interpolation |
-| Conformal Construction | Null cone/Horosphere; general round point; four-part norms |
-| Round Objects | Dipole/flat point; circle/line; sphere/plane in 5D; carrier, cocarrier, container, duals, partner, attitude, conjugate |
-| Conformal Operations | Null point dot/containment; circle/sphere meet and expansion; selected conformal transformations |
+20の内容ページ、44の図。Euclidean DotをGeometric Productの前に置く。Flat Normsは式だけを補足に置く。DistanceはPoint–Point / Line / Plane、DualはPoint / Line / PlaneのBulk / Weightを同時表示する。Projectionは4種の演算ごとに1図とし、gradeの組み合わせを選ぶ。
 
-## Limits of this first prototype
+Projective Product / Antiproductを独立した図にし、SandwichとIsometry、Motor / Flectorへ続ける。CGAはConstruction、Round objects、Join、Meet、Expansion、Dot / Containment、Translation / Rotation / Dilation / Sphere inversionを扱う。Join / Meet / Expansionではdimensionに応じたgrade pairとFlat化を選べる。
 
-- Projectionの意味が直ちに確認できることを優先し、中間bladeの可視化はunit slice・Horizon・直交factorを併用。高次元の積の全てを一つの3D視点で区別できるわけではない。
-- Null pointをfactorに持つDipole/Circle/Sphereを主に編集する。Round pointは半径を直接編集できる。その他の任意のRound objectの全成分編集、Imaginary objectの一般入力は次の拡張対象。
-- CGA Dot/ContainmentはまずNull pointとCircle/Sphereで実装。実・虚のRound pointの全配置、Sphere pairの接平面角など、本書の全ての図はまだ網羅していない。
-- CGA Join/Meet/Expansionは代表例。任意gradeの組み合わせと全てのCGA Projectionは未実装。
-- Conformal transformationsはTranslation、Rotation、Dilation、Sphere inversion。Transversionとその他のOperation dualityは未実装。
-- Projective sandwichの補助meshはサンプル点と移動経路。Figure 3.13の全てのgreen shadingを連続面として再現したものではない。
-- 5Dの完全なNull cone/Horosphereではなく、断面のサンプルmesh。VRChatでは同じデータから視点・断面の操作を再設計する予定。
+## Bounds of the visualization
+
+- 高次元の全ての面を一つの3D射影で分離して見せることはできない。Fold、カメラ、トグルで確認する。
+- CGAのNull coneとHorosphereは断面とmeshの表示。SphereのHorosphere intersectionはgreat circles、latitude mesh、シルエットで示す。
+- Round objectの入力factorは主にunit-weight Null point。Round pointとDotの図ではRadiusを直接変えられる。任意の非simple multivectorを幾何学的bladeとして描かない。
+- CGAの全てのProjection、Operation duality、Transversionは今回の図に含めない。
+- Source PDFsと検討用画像はGitにも公開成果物にも入れない。
 
 ## Verification
 
-`npm test`はClifford relation、basis triplesの結合法則、Complementの左右inverse、Projectionとhomogeneous scaling、Reflectionのantiproductとの一致、CGAのNull/radius/partner、Screw interpolationの端点と距離保存を検証する。
+`npm test`: 123 checks. Clifford relation、basis associativity、Complement、Projection、CGA embedding、Motor / Flector、全図とcontrols、cameraの向きとfold端点、斜めlocusのdrag速度、連続frame、Attitude / Distance、Line分解、Parametric form、不変quadricを検証する。
 
-全45種類の図の両次元版に対し、select / toggleの切り替え、finite geometry、Fix valueの保存も検証。ブラウザでは全ページの両次元版、数式と記号、数値編集、先端ドラッグ、レスポンシブ表示を確認する。
+ブラウザでは全20ページの両次元版、1280pxと375pxの表示、横溢れと描画例外、図単位の次元切替と編集値の保持、操作の有効化／解除を確認する。ローカルのgesture pageは13の入力試験を行う。実機スマホでの操作感は未確認。

@@ -2,7 +2,7 @@
 
 `Projective Geometric Algebra Illuminated` (Eric Lengyel) を参照して制作した、動かせる図の試作です。本書の図や本文を転載したサイトではありません。学習を補助する用途を想定し、トップに定義の変更・簡略化と、本書との併用を明記しています。
 
-15ページ、45種類の図を用意しています。各ページには原則3図。Exterior / Euclidean / RGAは3Dと4D、CGAは2D Round Geometry (4D algebra) と3D Round Geometry (5D algebra) を切り替えられます。2D Flat Geometryに存在しないPlaneを使うProjectionの項目は、4Dで表示します。
+20の内容ページ、44種類の図を用意しています。各図のそばで次元を切り替えられます。RGAは「2D Flat · 3D algebra / 3D Flat · 4D algebra」、CGAは「2D Round · 4D algebra / 3D Round · 5D algebra」と表記します。PlaneとSphereの単独図は、それぞれ存在する次元だけを表示します。
 
 ## Local preview
 
@@ -18,22 +18,27 @@ npm run dev
 
 ## Controls
 
-- 背景を左ドラッグ: e₃を上に保つOrbit。
-- 背景を右ドラッグ上下: e₃–e₄の回転。CGAでは追加軸の表示も切り替わります。
+- 背景を左ドラッグ: 掴んだ側がマウスに追従するOrbit。3Dはe₃を上に保ち、仰角は±90°の直前まで。4Dのe₄表示方向は固定。
+- 背景を右ドラッグ上下: 追加軸を0–90°で上に出す。3Dの背景では右ドラッグは回転しません。
 - CGAで右ドラッグ左右: origin axisとPoint at infinityの軸を滑らかに交換。
 - vectorの先端をドラッグ: 表示の視線に垂直な面内で移動。
 - 先端をShift + 左ドラッグ: e₁e₂平面。
 - 先端をShift + 右ドラッグ: 見えている追加の縦軸方向。
 - 数値欄: 隠れている次元を含む成分の編集。
 - Fix value: 指定のConstant-product locusへ移動を制約。
-- Wheel / Pinch: Zoom。Home / View ↺: 初期視点。
-- Complementの点線の先端: 直交factorの姿勢を調整。スライダーからも操作できます。
+- 図をクリック／タップするとWheel / Pinchを有効化。Esc、図の外、Release zoomで解除。非アクティブな図はページスクロールを妨げません。
+- タッチは1本指が左ドラッグ、2本指の中心の移動が右ドラッグ、指間距離がPinch。2本指から1本指になった時は、全て離すまで操作を中断します。
+- Complementの点線の先端: 直交factorの姿勢を調整。Scaleはfactorに均等配分します。
+- Perspective / Orthographic: 高次元から3Dへの線形射影の後に適用するカメラ投影。Home / View ↺で初期視点。
+- PNG: 現在の図と式を画像として保存。
 
 ## Reference material stays local
 
 `.gitignore` はPDF、Kindle形式、`tmp/`、`reference/`、`references/private/`、`.private/`を除外しています。PDFからの検討用キャプチャは `tmp/pdfs/` に保存します。
 
-`scripts/build.mjs` は `index.html`, `styles.css`, `src/` だけをコピーし、章のHTMLを生成します。成果物にPDF、書籍キャプチャ、その他想定外の形式が残っていればビルドを失敗させます。依存・閲覧時のCDNアクセスもありません。
+`scripts/build.mjs` は `index.html`, `styles.css`, `src/`, `assets/` だけをコピーし、章のHTMLを生成します。成果物にPDF、書籍キャプチャ、その他想定外の形式が残っていればビルドを失敗させます。STIX Two MathとそのOFLライセンスを同梱し、Unicodeの積の記号を表示します。閲覧時のCDNアクセスはありません。
+
+ローカルサーバーだけに `/__qa__/gestures.html` を用意しています。Run input checksで実際のCanvasのイベントリスナーを検証できます。このページは公開成果物に含めません。
 
 新しい参照資料は上記の非公開用フォルダに置いてください。参照資料をGit管理に追加する必要はありません。
 

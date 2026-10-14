@@ -41,12 +41,12 @@ export function spatialRound(scene,a,alg,label,color,options={}) {
   const info=cgaRound(a,alg);if(!info)return;
   if(info.flat){scene.flat(info.blade,info.alg,label,color);return info;}
   const {center,radius2,dirs}=info,r=Math.sqrt(Math.abs(radius2)),imaginary=radius2< -EPS;
-  if(alg.gradeOf(a)===1){scene.point(center,label,color,5);if(r>EPS)scene.sphere(center,r,color,true,.4,Array.from({length:alg.n-2},(_,i)=>basis(alg.n,i)));}
+  if(alg.gradeOf(a)===1){scene.point(center,label,color,5);if(options.radius&&r>EPS)scene.sphere(center,r,color,true,.4,Array.from({length:alg.n-2},(_,i)=>basis(alg.n,i)));}
   else if(dirs.length===1){scene.point(add(center,scale(dirs[0],r)),label,color,5);scene.point(add(center,scale(dirs[0],-r)),'',color,5);scene.line(add(center,scale(dirs[0],-r)),add(center,scale(dirs[0],r)),color,1,true,.5);}
   else if(dirs.length===2){scene.circle(center,dirs[0],dirs[1],r,color,imaginary,.95);scene.label(add(center,scale(dirs[0],r)),label,color,{dy:-10});}
   else if(dirs.length>=3){scene.sphere(center,r,color,true,.8,dirs);scene.label(center,label,color,{dy:-15});}
   if(imaginary)scene.label(center,'Imaginary',color,{dy:19,size:10});
-  if(options.radius)scene.label(add(center,basis(alg.n,0,r*.5)),`${imaginary?'|r|':'r'} = ${r.toFixed(2)}`,color,{dy:12,size:11});
+  if(options.radius){const direction=dirs[0]||basis(alg.n,0);scene.line(center,add(center,scale(direction,r)),color,2);scene.label(add(center,scale(direction,r*.5)),imaginary?'|r|':'r',color,{dy:15,size:16});}
   return info;
 }
 export function perpendicularFrame(a) {
@@ -62,6 +62,14 @@ const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]]
 const matvec=(m,x)=>m.map(row=>dot(row,x));
 const matmul=(a,b)=>a.map(row=>b[0].map((_,j)=>row.reduce((s,v,k)=>s+v*b[k][j],0)));
 const identity=()=>[basis(3,0),basis(3,1),basis(3,2)];
+export function screwParameters(transform){
+  const R=transform.rotation,T=transform.translation,angle=Math.acos(Math.max(-1,Math.min(1,(R[0][0]+R[1][1]+R[2][2]-1)/2)));
+  if(angle<EPS)return {angle,axis:unit(T),center:[0,0,0]};
+  let axis=unit([R[2][1]-R[1][2],R[0][2]-R[2][0],R[1][0]-R[0][1]]);
+  if(length(axis)<EPS){axis=[Math.sqrt(Math.max(0,(R[0][0]+1)/2)),Math.sqrt(Math.max(0,(R[1][1]+1)/2)),Math.sqrt(Math.max(0,(R[2][2]+1)/2))];if(R[0][1]<0)axis[1]*=-1;if(R[0][2]<0)axis[2]*=-1;axis=unit(axis);}
+  const perp=sub(T,scale(axis,dot(axis,T))),center=scale(add(perp,scale(cross(axis,perp),1/Math.tan(angle/2))),.5);
+  return {angle,axis,center};
+}
 export function composeReflections(planes,dim) {
   let rotation=identity(),translation=[0,0,0];
   for(const p of planes){const n=unit([...p.slice(0,dim),...Array(3-dim).fill(0)]),d=p[dim]/(length(p.slice(0,dim))||1);const r=identity().map((row,i)=>row.map((v,j)=>v-2*n[i]*n[j]));rotation=matmul(r,rotation);translation=add(matvec(r,translation),scale(n,-2*d));}

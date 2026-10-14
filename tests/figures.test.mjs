@@ -11,6 +11,6 @@ for(const dimension of [3,4])for(const chapter of chapters)for(const def of chap
     for(const spec of m.controls){if(spec.type==='select'){for(const [value] of spec.options){m.update(spec.key,value);paint(m);}}if(spec.type==='check'){m.update(spec.key,!spec.value);paint(m);}if(spec.key==='infinity'){m.update(spec.key);paint(m);m.reset();}}
   });
 }
-test('Fix value preserves wedge and trivector under arbitrary proposed motion',()=>{
-  for(const n of [3,4])for(const type of ['wedge','trivector']){const def=chapters[0].figures.find(d=>d.type===type),m=new FigureModel(def,n);m.state.fix=true;const before=m.alg.blade(m.vectors);for(let i=0;i<m.vectors.length;i++){const next=m.vectors[i].map((v,j)=>v+.2*(j+1));m.move(i,next);}assert.ok(length(sub(before,m.alg.blade(m.vectors)))<1e-7);}
+test('Fix value preserves wedge under arbitrary proposed motion; trivector has no constraint UI',()=>{
+  for(const n of [3,4]){const def=chapters[0].figures.find(d=>d.type==='wedge'),m=new FigureModel(def,n);m.state.fix=true;const before=m.alg.blade(m.vectors);for(let i=0;i<m.vectors.length;i++){const next=m.vectors[i].map((v,j)=>v+.2*(j+1));m.move(i,next);}assert.ok(length(sub(before,m.alg.blade(m.vectors)))<1e-7);const tri=new FigureModel(chapters[0].figures.find(d=>d.type==='trivector'),n);assert.ok(!tri.controls.some(c=>c.key==='fix'||c.key==='loci'));}
 });
