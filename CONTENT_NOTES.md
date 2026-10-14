@@ -7,7 +7,7 @@
 - Algebraic elementとbasis elementは太字、数値係数はscalar。Geometric productは⟑ (U+27D1)、antiproductは⟇ (U+27C7)。STIX Two Mathを同梱して字形を表示する。
 - Exterior Algebraの演算は計量非依存。前置きのEuclidean Geometric Algebraはidentity metric。RGAはdiag(1,…,1,0)。CGAはspatial directionsの自己積1、追加二軸の自己積0、交差積−1。
 - 2D Flatは3D algebra、3D Flatは4D algebra。2D Roundは4D algebra、3D Roundは5D algebra。存在しない次元の図を数合わせで作らない。
-- e1は右、e2は前（視点から遠ざかる向き）、e3は上。3D左回転はe3を上に保つ。4Dではe4の表示方向を左回転から独立させる。追加軸のfoldとCGAの交換角は0–90°。
+- e1は右、e2は前（視点から遠ざかる向き）、e3は上。3D左回転はe3を上に保つ。4Dではe4の表示方向を左回転から独立させる。初期状態でe4は手前、fold終端でe3は奥を向き、画面上で潰れても奥行きは保持する。追加軸のfoldとCGAの交換角は0–90°。
 - 高次元から3Dへの線形射影と、3DカメラのPerspective / Orthographicは別の設定。
 - Bivectorのfillは向きで暖色／寒色を使い分け、family colorは辺に使う。Grade≥3は一番奥の面の向きに色を揃え、向きの曲線矢印は原点側の面だけに描く。3Dへ潰れる4D Antiscalarは、固定したambient basisの向きで色を区別する。
 - Vectorのラベルは先端、bladeは中心。幾何学的なunit-slice表示にはhatを付ける。Bulk / Weightの丸やDualの星は下付き／上付きで組む。
@@ -47,6 +47,6 @@ Projective Product / Antiproductを独立した図にし、SandwichとIsometry�
 
 ## Verification
 
-`npm test`: 123 checks. Clifford relation、basis associativity、Complement、Projection、CGA embedding、Motor / Flector、全図とcontrols、cameraの向きとfold端点、斜めlocusのdrag速度、連続frame、Attitude / Distance、Line分解、Parametric form、不変quadricを検証する。
+`npm test`: 124 checks. Clifford relation、basis associativity、Complement、Projection、CGA embedding、Motor / Flector、全図とcontrols、cameraの向きとfold端点、斜めlocusのdrag速度、連続frame、Attitude / Distance、Line分解、Parametric form、不変quadricを検証する。
 
 ブラウザでは全20ページの両次元版、1280pxと375pxの表示、横溢れと描画例外、図単位の次元切替と編集値の保持、操作の有効化／解除を確認する。ローカルのgesture pageは13の入力試験を行う。実機スマホでの操作感は未確認。

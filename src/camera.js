@@ -15,7 +15,7 @@ export function toView(p,view,n,cga=false){
     // Quarter-turn exchange. Both extra axes keep nonnegative screen-up components.
     const d=(w*Math.cos(b)-u*Math.sin(b))*fold,h=(w*Math.sin(b)+u*Math.cos(b))*fold;
     v=add(v,[.6*d,h,.8*d]);
-  }else if(n===4)v[1]+=p[3]*Math.sin(a);
+  }else if(n===4){v[1]+=p[3]*Math.sin(a);v[2]+=p[3]*Math.cos(a)-p[2]*Math.sin(a);}
   return v;
 }
 export function orbit(view,n,cga,dx,dy,button=0){
@@ -45,4 +45,9 @@ export function intersectCoordinates(space,indices){
     frame=next.map(c=>frame.reduce((s,v,i)=>add(s,scale(v,c[i])),Array(space[0].length).fill(0)));
   }
   return frame;
+}
+export function restrictLinear(space,normal){
+  const den=dot(normal,normal);if(den<EPS)return space;const coefficients=[];
+  for(let i=0;i<space.length;i++){let v=basis(space.length,i).map((x,j)=>x-normal[i]*normal[j]/den);for(const u of coefficients)v=v.map((x,j)=>x-dot(v,u)*u[j]);if(length(v)>EPS)coefficients.push(scale(v,1/length(v)));}
+  return coefficients.map(c=>space.reduce((s,v,i)=>add(s,scale(v,c[i])),Array(space[0].length).fill(0)));
 }

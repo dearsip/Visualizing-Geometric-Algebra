@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Algebra, basis, add, sub, scale, dot, length } from '../src/algebra.js';
-import { defaultView,toView,orbit,screenPoint,dragDelta,intersectCoordinates,ELEVATION_LIMIT } from '../src/camera.js';
+import { defaultView,toView,orbit,screenPoint,dragDelta,intersectCoordinates,restrictLinear,ELEVATION_LIMIT } from '../src/camera.js';
 import { continuousFactors } from '../src/frames.js';
 import { chapters } from '../src/content.js';
 import { FigureModel } from '../src/figures.js';
@@ -18,7 +18,10 @@ test('right orbit is disabled in 3D; elevations nearly reach both poles',()=>{
   const v=defaultView(3),before={...v};orbit(v,3,false,100,-100,2);assert.deepEqual(v,before);orbit(v,3,false,0,10000);near(v.pitch,ELEVATION_LIMIT);orbit(v,3,false,0,-10000);near(v.pitch,-ELEVATION_LIMIT);assert.ok(ELEVATION_LIMIT>89*Math.PI/180);
 });
 test('4D folding has exact quarter-turn endpoints and e4 is independent of left orbit',()=>{
-  const v=defaultView(4);near(length(toView(basis(4,3),v,4)),0);orbit(v,4,false,0,-1000,2);near(v.extra,Math.PI/2);near(length(toView(basis(4,2),v,4)),0);const e4=toView(basis(4,3),v,4);orbit(v,4,false,120,-60);assert.deepEqual(toView(basis(4,3),v,4),e4);orbit(v,4,false,0,1000,2);near(v.extra,0);
+  const v=defaultView(4),collapsed=toView(basis(4,3),v,4);near(collapsed[0],0);near(collapsed[1],0);near(collapsed[2],1);orbit(v,4,false,0,-1000,2);near(v.extra,Math.PI/2);const e3=toView(basis(4,2),v,4);near(e3[0],0);near(e3[1],0);near(e3[2],-1);const e4=toView(basis(4,3),v,4);orbit(v,4,false,120,-60);assert.deepEqual(toView(basis(4,3),v,4),e4);orbit(v,4,false,0,1000,2);near(v.extra,0);
+});
+test('free perspective dragging keeps camera depth constant while oblique constraints remain free to change depth',()=>{
+  for(const n of [3,4,5]){const view=defaultView(n,n===5),cga=n===5,project=p=>screenPoint(p,view,n,cga,800,500,65),p=Array.from({length:n},(_,i)=>.3*(i+1)),space=Array.from({length:n},(_,i)=>basis(n,i)),normal=space.map(v=>project(add(p,v)).z-project(p).z),plane=restrictLinear(space,normal),delta=dragDelta(project,p,7,-5,plane),q=project(add(p,delta));near(q.z,project(p).z);near(q.x-project(p).x,7,1e-3);near(q.y-project(p).y,-5,1e-3);}
 });
 test('forward e2 is away at zero yaw; CGA extra axes never turn downward',()=>{
   const v={...defaultView(3),yaw:0,pitch:0};assert.ok(toView(basis(3,1),v,3)[2]<0);assert.ok(toView(basis(3,0),v,3)[0]>0);for(const n of [4,5])for(let beta=0;beta<=Math.PI/2;beta+=.08){v.extra=Math.PI/2;v.conformal=beta;for(const i of [n-2,n-1])assert.ok(toView(basis(n,i),v,n,true)[1]>=-1e-9);}

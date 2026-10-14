@@ -1,5 +1,5 @@
 import { Algebra, add, sub, scale, dot, unit, length, basis, EPS } from './algebra.js';
-import { defaultView, screenPoint, orbit, dragDelta, coordinateSpace, intersectCoordinates } from './camera.js';
+import { defaultView, screenPoint, orbit, dragDelta, coordinateSpace, intersectCoordinates, restrictLinear } from './camera.js';
 import { measureMath, drawMath } from './math-label.js';
 import { continuousFactors } from './frames.js';
 export const colors = { ink:'#284d3f', warm:'#e28a42', cool:'#67b4ca', a:'#315e4a', b:'#927044', c:'#8d5c79', result:'#278e87', purple:'#9b70af', mesh:'#84937d', green:'#549a6b', projective:'#ba8042', infinity:'#9265b4' };
@@ -184,7 +184,8 @@ export class Scene {
     if(!this.drag)return;const {handle,button}=this.drag,dx=p.x-this.drag.p.x,dy=p.y-this.drag.p.y;this.drag.p=p;
     if(handle){
       let space=handle.space||coordinateSpace(this.n);
-      if(e.shiftKey){const indices=button===2?Array.from({length:this.n-2},(_,i)=>i+2):[0,1];space=this.orthonormal(intersectCoordinates(space,indices));}
+      if(e.shiftKey){const o=this.project(Z(this.n)),indices=(button===2?Array.from({length:this.n-2},(_,i)=>i+2):[0,1]).filter(i=>{const p=this.project(basis(this.n,i));return button!==2||Math.hypot(p.x-o.x,p.y-o.y)>1;});space=this.orthonormal(intersectCoordinates(space,indices));}
+      else if(space.length===this.n){const near=this.project(handle.v).z,normal=space.map(v=>(this.project(add(handle.v,scale(v,1e-4))).z-near)/1e-4);space=restrictLinear(space,normal);}
       const delta=dragDelta(v=>this.project(v),handle.v,dx,dy,space),next=add(handle.v,delta);
       if(handle.onMove)handle.onMove(next);else this.change(handle.index,next);
       // Follow the newly rendered handle instead of using a stale vector snapshot.
