@@ -49,4 +49,4 @@ Projective Product / Antiproductを独立した図にし、SandwichとIsometry�
 
 `npm test`: 124 checks. Clifford relation、basis associativity、Complement、Projection、CGA embedding、Motor / Flector、全図とcontrols、cameraの向きとfold端点、斜めlocusのdrag速度、連続frame、Attitude / Distance、Line分解、Parametric form、不変quadricを検証する。
 
-ブラウザでは全20ページの両次元版、1280pxと375pxの表示、横溢れと描画例外、図単位の次元切替と編集値の保持、操作の有効化／解除を確認する。ローカルのgesture pageは13の入力試験を行う。実機スマホでの操作感は未確認。
+ブラウザでは全20ページの両次元版、1280pxと375pxの表示、横溢れと描画例外、図単位の次元切替と編集値の保持、操作の有効化／解除を確認する。ローカルのgesture pageは16の入力試験を行う。実機スマホでの操作感は未確認。
