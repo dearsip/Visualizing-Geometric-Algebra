@@ -79,7 +79,7 @@ export function paint(m,scene){
     if(grade>0&&grade<n){inputs(m,scene,activeInputs(m),grade===1?[sourceLabel]:sourceNames);if(grade>1)scene.blade(vs.slice(0,grade),sourceLabel,{color:colors.a});}else scene.element(u,A,sourceLabel);
     if(fs.length){scene.blade(fs,outLabel,{dashed:true,color:colors.b,alpha:.11});for(let j=0;j<fs.length;j++){if(fs.length>1)scene.handle(fs[j],complementNames[j],`complement-${j}`,colors.b,next=>m.frames.set('complement',rotateFrame(m.frames.get('complement'),j,scale(next,sign))),true);}}
     else scene.element(A.complement(u,s.side),A,outLabel,{color:colors.b});
-    const source=grade===n?A.factor(u):vs.slice(0,grade),ordered=s.side==='right'?[...source,...fs]:[...fs,...source];for(let i=1;i<ordered.length;i++)scene.line(ordered[i-1],ordered[i],colors.mesh,1,true);
+    const source=grade===n?balanced(m,u,'source-top'):vs.slice(0,grade),ordered=s.side==='right'?[...source,...fs]:[...fs,...source];for(let i=1;i<ordered.length;i++)scene.line(ordered[i-1],ordered[i],colors.mesh,1,true);
     m.row(sourceLabel,m.mv(u));m.row(outLabel,m.mv(A.complement(u,s.side)));return true;
   }
   if(t==='antiwedge'||t==='geometric-antiproduct'){
@@ -148,7 +148,7 @@ function paintFlat(m,scene){
   if(t==='projection'){
     inputs(m,scene);const {a:x,b:y,aName:xn,bName:yn}=pair(m),central=m.def.variant%2===1,anti=m.def.variant>=2,{dual,intermediate,result}=A.project(x,y,{central,anti}),symbol=central?'★':'☆',du=`${yn}^{${symbol}}`,first=`${xn} ${anti?'∨':'∧'} ${du}`,expr=`${yn} ${anti?'∧':'∨'} (${first})`;
     flat(scene,m,x,xn,colors.a,s.homogeneous);flat(scene,m,y,yn,colors.b,s.homogeneous);if(s.dual){scene.element(dual,A,du,{dashed:true,color:colors.purple,alpha:.12});scene.flat(dual,A,hat(du),colors.purple);}if(s.intermediate)flat(scene,m,intermediate,first,colors.purple,s.homogeneous);flat(scene,m,result,expr,colors.result,s.homogeneous);
-    if(s.attached&&!anti){const xf=A.factor(x),df=A.factor(dual);if(xf.length&&df.length&&xf.length+df.length<=n)scene.blade([...xf,...df],'',{color:colors.purple,alpha:.08});}
+    if(s.attached&&!anti){const xf=balanced(m,x,'attached-source'),df=balanced(m,dual,'attached-dual');if(xf.length&&df.length&&xf.length+df.length<=n)scene.blade([...xf,...df],'',{color:colors.purple,alpha:.08});}
     if(!anti&&A.gradeOf(x)===1){const p=affine(A.coordinates(x)),q=affine(A.coordinates(result));if(p&&q)scene.line(p,q,colors.result,1.3,true);}
     m.formula=`${V(yn)} ${anti?'∧':'∨'} (${V(xn)} ${anti?'∨':'∧'} ${V(yn)}<sup>${symbol}</sup>)`;m.row(du,m.mv(dual));m.row(first,m.mv(intermediate));m.row(expr,m.mv(result));if(A.gradeOf(result)===-1)m.status='0 · degenerate configuration';return true;
   }
