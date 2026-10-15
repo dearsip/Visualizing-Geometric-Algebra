@@ -1,10 +1,11 @@
 import { Algebra, add, sub, scale, dot, unit, length, basis, EPS } from './algebra.js';
-import { defaultView, screenPoint, orbit, dragDelta, coordinateSpace, intersectCoordinates, restrictLinear } from './camera.js';
+import { defaultView, toView, screenPoint, orbit, dragDelta, dragOnSurface, coordinateSpace, intersectCoordinates, restrictLinear } from './camera.js';
 import { measureMath, drawMath } from './math-label.js';
 import { continuousFactors } from './frames.js';
 export const colors = { ink:'#284d3f', warm:'#e28a42', cool:'#67b4ca', a:'#315e4a', b:'#927044', c:'#8d5c79', result:'#278e87', purple:'#9b70af', mesh:'#84937d', green:'#549a6b', projective:'#ba8042', infinity:'#9265b4' };
 const Z = n => Array(n).fill(0);
 const sum = (vs, n) => vs.reduce(add, Z(n));
+const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
 const rgba = (hex, alpha) => { const v = parseInt(hex.replace('#',''),16); return `rgba(${v>>16},${(v>>8)&255},${v&255},${alpha})`; };
 export class Scene {
   constructor(canvas, n, build, change) {
@@ -24,6 +25,7 @@ export class Scene {
   activate(value=true){this.engaged=value;if(!value)this.up({});this.canvas.classList.toggle('interactive',value);this.onActivation?.(value);}
   resetView(){const perspective=this.view.perspective;this.view=defaultView(this.n,this.isCGA,this.section);this.view.perspective=perspective;this.render();}
   project(p){return screenPoint(p,this.view,this.n,this.isCGA,this.w,this.h,this.s);}
+  toDisplay(p){return toView(p,{...this.view,frame:null,yaw:0,pitch:0,roll:0},this.n,this.isCGA);}
   line(a,b,color=colors.ink,width=1,dash=false,alpha=1){this.commands.push({kind:'line',points:[a,b],color,width,dash,alpha});}
   poly(points,color=null,alpha=.16,dash=false){this.commands.push({kind:'poly',points,color,alpha,dash});}
   label(p,text,color=colors.ink,options={}){if(text)this.labels.push({p,text,color,...options});}
@@ -35,14 +37,15 @@ export class Scene {
     const fs=frame||[basis(this.n,0),basis(this.n,1),basis(this.n,2)];
     if(fs.length<3){this.circle(center,fs[0],fs[1],r,color,dash,alpha);return;}
     for(let j=0;j<3;j++)this.circle(center,fs[j],fs[(j+1)%3],r,color,dash,alpha);
-    if(mesh)for(let axis=0;axis<3;axis++){const other=[0,1,2].filter(i=>i!==axis);for(let a=-r;a<=r;a+=.9)for(let b=-r;b<=r;b+=.9){const q=r*r-a*a-b*b;if(q<0)continue;const p=add(center,add(scale(fs[other[0]],a),scale(fs[other[1]],b))),d=scale(fs[axis],Math.sqrt(q));this.line(sub(p,d),add(p,d),color,.7,true,alpha*.4);}}
+    if(mesh)for(let axis=0;axis<3;axis++){const other=[0,1,2].filter(i=>i!==axis);for(let a=-r;a<=r;a+=1.2)for(let b=-r;b<=r;b+=1.2){const q=r*r-a*a-b*b;if(q<0)continue;const p=add(center,add(scale(fs[other[0]],a),scale(fs[other[1]],b))),d=scale(fs[axis],Math.sqrt(q));this.line(sub(p,d),add(p,d),color,.7,true,alpha*.4);}}
     if(fill){const points=[];for(let lat=0;lat<=12;lat++)for(let lon=0;lon<24;lon++){const t=lat*Math.PI/12,p=lon*Math.PI/12;points.push(add(center,add(scale(fs[0],r*Math.sin(t)*Math.cos(p)),add(scale(fs[1],r*Math.sin(t)*Math.sin(p)),scale(fs[2],r*Math.cos(t))))));}this.commands.push({kind:'hull',points,color,alpha:.04});}
   }
   blade(vectors,text,{origin=Z(this.n),dashed=false,color=null,alpha=.16,connect=false}={}){
     const k=vectors.length;if(!k)return;
     if(k===1){this.arrow(vectors[0],text,color||colors.ink,origin,dashed);return;}
     const solid=k>=3?`solid-${this.commands.length}`:null;
-    const ambientColor=k===this.n&&k>=4?(new Algebra(this.n).blade(vectors).at(-1)<0?colors.cool:colors.warm):null;
+    const projected=vectors.map(v=>this.toDisplay(v)),det3=projected.length>=3?dot(projected[0],cross(projected[1],projected[2])):0;
+    const ambientColor=k===3?(det3<0?colors.cool:colors.warm):k===this.n&&k>=4?(new Algebra(this.n).blade(vectors).at(-1)<0?colors.cool:colors.warm):null;
     for(let i=0;i<k;i++)for(let j=i+1;j<k;j++){
       const rest=Array.from({length:k},(_,t)=>t).filter(t=>t!==i&&t!==j);
       for(let mask=0;mask<(1<<rest.length);mask++){
@@ -86,15 +89,15 @@ export class Scene {
   locusSpan(p,fs,color=colors.mesh){if(fs.length===1)this.locusLine(p,fs[0],color);else if(fs.length===2)this.disk(p,fs,2.4,color,.025,true);else if(fs.length>=3)this.sphere(p,2.4,color,true,.6,fs.slice(0,3),{mesh:true,fill:true});}
   disk(p,fs,r,color=colors.mesh,alpha=.04,dash=true){
     this.poly(Array.from({length:49},(_,i)=>add(p,add(scale(fs[0],r*Math.cos(i*Math.PI/24)),scale(fs[1],r*Math.sin(i*Math.PI/24))))),color,alpha,dash);
-    for(let t=-r;t<=r;t+=.8){const s=Math.sqrt(Math.max(0,r*r-t*t));this.line(add(p,add(scale(fs[0],t),scale(fs[1],-s))),add(p,add(scale(fs[0],t),scale(fs[1],s))),color,.8,true,.45);this.line(add(p,add(scale(fs[1],t),scale(fs[0],-s))),add(p,add(scale(fs[1],t),scale(fs[0],s))),color,.8,true,.45);}
+    for(let t=-r;t<=r;t+=1.1){const s=Math.sqrt(Math.max(0,r*r-t*t));this.line(add(p,add(scale(fs[0],t),scale(fs[1],-s))),add(p,add(scale(fs[0],t),scale(fs[1],s))),color,.8,true,.45);this.line(add(p,add(scale(fs[1],t),scale(fs[0],-s))),add(p,add(scale(fs[1],t),scale(fs[0],s))),color,.8,true,.45);}
   }
   sliceMesh(){
     const n=this.n,h=n-1,r=3.3,center=basis(n,h);
     if(n===3){this.disk(center,[basis(n,0),basis(n,1)],r,colors.mesh,.018,true);this.circle(Z(n),basis(n,0),basis(n,1),r,colors.mesh,true,.7);}
     else{
-      this.sphere(Z(n),r,colors.mesh,true,.4);this.sphere(center,r,colors.mesh,true,.4,null,{mesh:true});
+      this.sphere(Z(n),r,colors.mesh,true,.4);this.sphere(center,r,colors.mesh,true,.4,null,{mesh:true,fill:true});
     }
-    this.label(add(center,basis(n,0,-2.8)),n===3?'z = 1':'w = 1',colors.mesh,{size:16});this.label(basis(n,0,-3.2),'\\hat{Horizon}',colors.mesh,{dy:20,size:16});
+    if(this.sliceLabels){this.label(add(center,basis(n,0,-2.8)),n===3?'z = 1':'w = 1',colors.mesh,{size:16});this.label(basis(n,0,-3.2),'Horizon',colors.mesh,{dy:20,size:16});}
   }
   // Intersect a linear homogeneous subspace with h = 1, then clip to the display ball.
   flat(a,alg,text,color=colors.result,{r=3.3,showRays=false}={}){
@@ -160,10 +163,11 @@ export class Scene {
     const occupied=[];
     for(const item of this.labels){const p=this.project(item.p);if(!Number.isFinite(p.x)||!Number.isFinite(p.y)||p.x< -80||p.x>this.w+80||p.y< -80||p.y>this.h+80)continue;const size=Math.max(16,item.size||18);
       const width=measureMath(ctx,item.text,size,!item.scalar);let x=Math.min(this.w-width-12,Math.max(8,p.x+(item.dx||0))),y=Math.min(this.h-25,Math.max(28,p.y+(item.dy||0)));
-      for(let t=0;t<5&&occupied.some(b=>x<b.x+b.w&&x+width>b.x&&Math.abs(y-b.y)<20);t++)y=Math.max(28,y-22);
+      const anchor={x,y};let best={x,y,penalty:Infinity};for(const [dx,dy] of [[0,0],[0,-25],[0,25],[24,-50],[-24,50],[40,-75],[-40,75],[60,-100],[-60,100]]){const cx=Math.min(this.w-width-12,Math.max(8,anchor.x+dx)),cy=Math.min(this.h-25,Math.max(28,anchor.y+dy)),penalty=occupied.reduce((sum,b)=>sum+(cx<b.x+b.w&&cx+width>b.x&&Math.abs(cy-b.y)<22?1:0),0);if(penalty<best.penalty)best={x:cx,y:cy,penalty};if(!penalty)break;}x=best.x;y=best.y;if(Math.hypot(x-anchor.x,y-anchor.y)>30)this.lineLabelLeader(ctx,p,x,y,item.color);
       occupied.push({x,y,w:width});drawMath(ctx,item.text,x,y,size,item.color,!item.scalar);
     }
   }
+  lineLabelLeader(ctx,p,x,y,color){ctx.save();ctx.strokeStyle=color;ctx.globalAlpha=.35;ctx.lineWidth=.7;ctx.setLineDash([2,3]);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(x,y-5);ctx.stroke();ctx.restore();}
   orientationColor(ps){let area=0;for(let i=0;i<ps.length;i++)area+=ps[i].x*ps[(i+1)%ps.length].y-ps[(i+1)%ps.length].x*ps[i].y;return area<0?colors.warm:colors.cool;}
   arrowhead(ctx,a,b,color,size){const t=Math.atan2(b.y-a.y,b.x-a.x);ctx.setLineDash([]);ctx.fillStyle=color;ctx.beginPath();ctx.moveTo(b.x,b.y);ctx.lineTo(b.x-size*Math.cos(t-.42),b.y-size*Math.sin(t-.42));ctx.lineTo(b.x-size*Math.cos(t+.42),b.y-size*Math.sin(t+.42));ctx.closePath();ctx.fill();}
   pos(e){const r=this.canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
@@ -172,7 +176,7 @@ export class Scene {
     e.preventDefault();this.canvas.focus({preventScroll:true});this.activate();try{this.canvas.setPointerCapture(e.pointerId);}catch{}const p=this.pos(e);this.pointers.set(e.pointerId,p);
     if(this.pointers.size>=2){this.gesture='two';this.pair=this.pairState();this.gestureView={...this.view};this.drag=null;return;}
     const near=this.handles.map(h=>({...h,p:this.project(h.v)})).sort((a,b)=>Math.hypot(a.p.x-p.x,a.p.y-p.y)-Math.hypot(b.p.x-p.x,b.p.y-p.y))[0];
-    const handle=near&&Math.hypot(near.p.x-p.x,near.p.y-p.y)<(e.pointerType==='touch'?28:18)?near:null;
+    const handle=e.button!==2&&near&&Math.hypot(near.p.x-p.x,near.p.y-p.y)<(e.pointerType==='touch'?28:18)?near:null;
     this.gesture='one';this.drag={p,handle,button:e.button,shift:e.shiftKey};this.canvas.classList.add('dragging');
   }
   pairState(){const [a,b]=[...this.pointers.values()];return {x:(a.x+b.x)/2,y:(a.y+b.y)/2,d:Math.hypot(a.x-b.x,a.y-b.y)};}
@@ -186,7 +190,7 @@ export class Scene {
       let space=handle.space||coordinateSpace(this.n);
       if(e.shiftKey){const o=this.project(Z(this.n)),indices=(button===2?Array.from({length:this.n-2},(_,i)=>i+2):[0,1]).filter(i=>{const p=this.project(basis(this.n,i));return button!==2||Math.hypot(p.x-o.x,p.y-o.y)>1;});space=this.orthonormal(intersectCoordinates(space,indices));}
       else if(space.length===this.n){const near=this.project(handle.v).z,normal=space.map(v=>(this.project(add(handle.v,scale(v,1e-4))).z-near)/1e-4);space=restrictLinear(space,normal);}
-      const delta=dragDelta(v=>this.project(v),handle.v,dx,dy,space),next=add(handle.v,delta);
+      const delta=handle.retract?null:dragDelta(v=>this.project(v),handle.v,dx,dy,space),next=handle.retract?dragOnSurface(v=>this.project(v),handle.v,dx,dy,space,handle.retract):add(handle.v,delta);
       if(handle.onMove)handle.onMove(next);else this.change(handle.index,next);
       // Follow the newly rendered handle instead of using a stale vector snapshot.
       this.render();const live=this.handles.find(h=>h.index===handle.index);if(live)this.drag.handle={...live,p:this.project(live.v)};

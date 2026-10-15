@@ -1,8 +1,8 @@
 # Geometric Algebra · Visual Atlas
 
-`Projective Geometric Algebra Illuminated` (Eric Lengyel) を参照して制作した、動かせる図の試作です。本書の図や本文を転載したサイトではありません。学習を補助する用途を想定し、トップに定義の変更・簡略化と、本書との併用を明記しています。
+`Projective Geometric Algebra Illuminated` (Eric Lengyel) を参照して制作した、動かせる図の試作です。原著の図や本文を転載したサイトではありません。学習を補助する用途を想定し、トップに定義の変更・簡略化と、このサイトだけでの学習を想定しないことを明記しています。
 
-20の内容ページ、44種類の図を用意しています。各図のそばで次元を切り替えられます。RGAは「2D Flat · 3D algebra / 3D Flat · 4D algebra」、CGAは「2D Round · 4D algebra / 3D Round · 5D algebra」と表記します。PlaneとSphereの単独図は、それぞれ存在する次元だけを表示します。
+20の内容ページ、51種類の図を用意しています。各図のそばの次元切替は、ページ内で共通の状態を操作します。RGAは「2D Flat · 3D algebra / 3D Flat · 4D algebra」、CGAは「2D Round · 4D algebra / 3D Round · 5D algebra」と表記します。PlaneとSphereの単独図は、それぞれ存在する次元だけを表示します。
 
 ## Local preview
 
@@ -18,18 +18,18 @@ npm run dev
 
 ## Controls
 
-- 背景を左ドラッグ: 掴んだ側がマウスに追従するOrbit。3Dはe₃を上に保ち、仰角は±90°の直前まで。4Dのe₄表示方向は固定。
-- 背景を右ドラッグ上下: 追加軸を0–90°で上に出す。3Dの背景では右ドラッグは回転しません。
+- 背景を左ドラッグ: 掴んだ側がマウスに追従するOrbit。3Dはe₃を上に保ち、仰角は±90°の直前まで。4D / CGAは仰角制限のない自由回転。e₄などの追加軸の表示方向は固定。
+- 右ドラッグ上下: 点の上を含め、現在の上方向と追加軸の緯度を0–90°で変えます。3Dでは右ドラッグは動作しません。
 - CGAで右ドラッグ左右: origin axisとPoint at infinityの軸を滑らかに交換。
 - vectorの先端をドラッグ: 表示の視線に垂直な面内で移動。
 - 先端をShift + 左ドラッグ: e₁e₂平面。
-- 先端をShift + 右ドラッグ: 見えている追加の縦軸方向。
 - 数値欄: 隠れている次元を含む成分の編集。
-- Fix value: 指定のConstant-product locusへ移動を制約。
+- Fix value: Wedge / DotではConstant-product locusへ制約。Geometric Productでは両入力を固定。
 - 図をクリック／タップするとWheel / Pinchを有効化。Esc、図の外、Release zoomで解除。非アクティブな図はページスクロールを妨げません。
 - タッチは1本指が左ドラッグ、2本指の中心の移動が右ドラッグ、指間距離がPinch。2本指から1本指になった時は、全て離すまで操作を中断します。
 - Complementの点線の先端: 直交factorの姿勢を調整。Scaleはfactorに均等配分します。
-- Perspective / Orthographic: 高次元から3Dへの線形射影の後に適用するカメラ投影。Home / View ↺で初期視点。
+- Perspective / Orthographic: 高次元から3Dへの線形射影の後に適用するカメラ投影。既定はOrthographic。Home / View ↺で初期視点。
+- 操作説明の開閉状態は図・ページ間で共通です。右側の操作欄は独立スクロールします。
 - PNG: 現在の図と式を画像として保存。
 
 ## Reference material stays local
@@ -52,6 +52,6 @@ npm run dev
 
 ## Content and remaining work
 
-実装範囲・本書との違い・未実装項目は [CONTENT_NOTES.md](CONTENT_NOTES.md) を参照してください。計算と描画を分離しているので、将来VRChatで同じ演算例・数値検証を使える構成です。
+実装範囲・原著との違い・未実装項目は [CONTENT_NOTES.md](CONTENT_NOTES.md) を参照してください。計算と描画を分離しているので、将来VRChatで同じ演算例・数値検証を使える構成です。
 
 一次資料: [Author's website](https://projectivegeometricalgebra.org/), [RGA Wiki](https://rigidgeometricalgebra.org/), [CGA Wiki](https://conformalgeometricalgebra.org/)。

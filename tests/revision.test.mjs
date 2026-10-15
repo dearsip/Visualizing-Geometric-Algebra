@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { Algebra, basis, add, sub, scale, dot, length } from '../src/algebra.js';
-import { defaultView,toView,orbit,screenPoint,dragDelta,intersectCoordinates,restrictLinear,ELEVATION_LIMIT } from '../src/camera.js';
+import { defaultView,toView,orbit,screenPoint,dragDelta,dragOnSurface,intersectCoordinates,restrictLinear,ELEVATION_LIMIT } from '../src/camera.js';
 import { continuousFactors } from '../src/frames.js';
 import { chapters } from '../src/content.js';
 import { FigureModel } from '../src/figures.js';
 import { Scene } from '../src/scene.js';
 import { affine,embed,cgaRound,closestPoint } from '../src/geometry.js';
-import { activeInputs,dragSpace,embeddedRound,projectiveSurface } from '../src/lesson-revisions.js';
+import { activeInputs,dragSpace,embeddedRound,projectiveSurface,surfaceRetraction } from '../src/lesson-revisions.js';
 import { mathTokens } from '../src/math-label.js';
 const near=(a,b,t=1e-6)=>assert.ok(Math.abs(a-b)<t,`${a} != ${b}`);
 const definition=type=>chapters.flatMap(c=>c.figures).find(d=>d.type===type);
@@ -17,8 +17,8 @@ test('grab orbit follows drag on the near side in orthographic and perspective v
 test('right orbit is disabled in 3D; elevations nearly reach both poles',()=>{
   const v=defaultView(3),before={...v};orbit(v,3,false,100,-100,2);assert.deepEqual(v,before);orbit(v,3,false,0,10000);near(v.pitch,ELEVATION_LIMIT);orbit(v,3,false,0,-10000);near(v.pitch,-ELEVATION_LIMIT);assert.ok(ELEVATION_LIMIT>89*Math.PI/180);
 });
-test('4D folding has exact quarter-turn endpoints and e4 is independent of left orbit',()=>{
-  const v=defaultView(4),collapsed=toView(basis(4,3),v,4);near(collapsed[0],0);near(collapsed[1],0);near(collapsed[2],1);orbit(v,4,false,0,-1000,2);near(v.extra,Math.PI/2);const e3=toView(basis(4,2),v,4);near(e3[0],0);near(e3[1],0);near(e3[2],-1);const e4=toView(basis(4,3),v,4);orbit(v,4,false,120,-60);assert.deepEqual(toView(basis(4,3),v,4),e4);orbit(v,4,false,0,1000,2);near(v.extra,0);
+test('4D folding collapses the current up direction and e4 is independent of free left orbit',()=>{
+  const v=defaultView(4),collapsed=toView(basis(4,3),v,4);near(collapsed[0],0);near(collapsed[1],0);near(collapsed[2],1);orbit(v,4,false,120,-260);const up=[...v.frame[1],0];orbit(v,4,false,0,-1000,2);near(v.extra,Math.PI/2);const collapsedUp=toView(up,v,4);near(collapsedUp[0],0);near(collapsedUp[1],0);near(collapsedUp[2],-1);const e4=toView(basis(4,3),v,4);orbit(v,4,false,120,-600);assert.deepEqual(toView(basis(4,3),v,4),e4);for(const row of v.frame)near(length(row),1);near(dot(v.frame[0],v.frame[1]),0);orbit(v,4,false,0,1000,2);near(v.extra,0);
 });
 test('free perspective dragging keeps camera depth constant while oblique constraints remain free to change depth',()=>{
   for(const n of [3,4,5]){const view=defaultView(n,n===5),cga=n===5,project=p=>screenPoint(p,view,n,cga,800,500,65),p=Array.from({length:n},(_,i)=>.3*(i+1)),space=Array.from({length:n},(_,i)=>basis(n,i)),normal=space.map(v=>project(add(p,v)).z-project(p).z),plane=restrictLinear(space,normal),delta=dragDelta(project,p,7,-5,plane),q=project(add(p,delta));near(q.z,project(p).z);near(q.x-project(p).x,7,1e-3);near(q.y-project(p).y,-5,1e-3);}
@@ -55,6 +55,12 @@ test('parametric contraction stays on the line/plane; equal-grade angles retain 
 test('line decomposition reconstructs bulk/weight with a unit direction and weighted support',()=>{
   for(const n of [3,4]){const A=new Algebra(n,'rigid'),p=[1,2,...(n===4?[.6]:[]),2],q=[-2,1,...(n===4?[1.1]:[]),.7],u=A.blade([p,q]),weight=A.weight(u),d=Array(n).fill(0);for(let i=0;i<n-1;i++)d[i]=-weight[(1<<i)|(1<<(n-1))];const support=closestPoint(basis(n,n-1),u,A);support[n-1]=0;assert.ok(length(sub(A.blade([scale(d,1/length(d)),scale(support,-length(d))]),A.bulk(u)))<1e-6);assert.ok(length(sub(A.blade([basis(n,n-1),d]),weight))<1e-6);}
 });
-test('projective quadric mesh includes both homogeneous weights and preserves the sandwich invariant',()=>{
-  for(const n of [3,4]){const A=new Algebra(n,'rigid'),a=[1.3,.4,...(n===4?[.2]:[]),.5],v=[.8,-.7,...(n===4?[.1]:[]),1.2],out=A.coordinates(scale(A.reflect(A.vector(v),A.vector(a)),-1)),norm=length(a.slice(0,-1)),u=scale(a.slice(0,-1),1/norm),L=p=>p[n-1]-a[n-1]*dot(u,p.slice(0,-1))/norm,k=dot(v.slice(0,-1),v.slice(0,-1))/(L(v)**2),scene=Object.assign(Object.create(Scene.prototype),{n,commands:[],labels:[]});projectiveSurface(scene,a,v);const mesh=scene.commands.flatMap(c=>c.points);assert.ok(mesh.some(p=>Math.abs(p[n-1]-out[n-1])<1e-6));for(const p of mesh)near(dot(p.slice(0,-1),p.slice(0,-1))-k*L(p)**2,0,1e-5);near(dot(out.slice(0,-1),out.slice(0,-1))-k*L(out)**2,0);}
+test('projective invariant surfaces are restricted to the unit slice and preserve the sandwich invariant',()=>{
+  for(const n of [3,4]){const A=new Algebra(n,'rigid'),a=[1.3,.4,...(n===4?[.2]:[]),.5],v=[.8,-.7,...(n===4?[.1]:[]),1.2],out=A.coordinates(scale(A.reflect(A.vector(v),A.vector(a)),-1)),norm=length(a.slice(0,-1)),u=scale(a.slice(0,-1),1/norm),L=p=>p[n-1]-a[n-1]*dot(u,p.slice(0,-1))/norm,k=dot(v.slice(0,-1),v.slice(0,-1))/(L(v)**2),scene=Object.assign(Object.create(Scene.prototype),{n,commands:[],labels:[]});projectiveSurface(scene,a,v);const mesh=scene.commands.flatMap(c=>c.points);assert.ok(mesh.length>20);for(const p of mesh){near(p[n-1],1);near(dot(p.slice(0,-1),p.slice(0,-1))-k*L(p)**2,0,1e-5);}near(dot(out.slice(0,-1),out.slice(0,-1))-k*L(out)**2,0);}
 });
+
+test('geometric product Fix value freezes both inputs, including coordinate edits',()=>{for(const n of [3,4])for(const type of ['geometric','projective-product']){const m=new FigureModel(definition(type),n),before=structuredClone(m.vectors);m.update('fix',true);for(let i=0;i<2;i++)m.move(i,add(m.vectors[i],basis(n,0,2)));assert.deepEqual(m.vectors,before);assert.deepEqual(dragSpace(m,0),[]);}});
+test('input wedges retain actual edges, and trivector color is independent of left orbit',()=>{for(const n of [3,4]){const m=new FigureModel(definition('trivector'),n),scene=Object.assign(Object.create(Scene.prototype),{n,commands:[],labels:[],handles:[],view:defaultView(n)});m.paint(scene);const before=scene.commands.filter(c=>c.kind==='poly').map(c=>c.color);orbit(scene.view,n,false,130,280);scene.commands=[];scene.labels=[];scene.handles=[];m.paint(scene);assert.deepEqual(scene.commands.filter(c=>c.kind==='poly').map(c=>c.color),before);m.update('order',1);scene.commands=[];m.paint(scene);assert.notEqual(scene.commands.find(c=>c.kind==='poly').color,before[0]);}});
+test('line weight normalization and parallel meet preserve the geometric objects',()=>{for(const n of [3,4]){const line=chapters.flatMap(c=>c.figures).find(f=>f.id==='line'),m=new FigureModel(line,n),A=m.alg,original=A.blade(m.vectors);m.update('unitLineWeight');near(A.weightNorm(A.blade(m.vectors)),1);for(const v of m.vectors)assert.ok(length(A.wedge(A.vector(v),original))<1e-6);const meet=new FigureModel(definition('meet'),n);meet.update('parallel');const x=meet.alg.blade(meet.vectors.slice(0,n-1)),y=meet.alg.blade(meet.vectors.slice(n-1)),out=meet.alg.antiwedge(x,y);assert.ok(length(out)>1e-5);near(length(meet.alg.weight(out)),0);}});
+test('skew-line distance agrees with the closest segment',()=>{const m=new FigureModel(definition('distance'),4);m.update('case',3);m.vectors=[[0,0,0,1],[1,0,0,1],[0,0,2,1],[0,1,2,1]];const scene=Object.assign(Object.create(Scene.prototype),{n:4,commands:[],labels:[],handles:[],view:defaultView(4)});m.paint(scene);near(m.rows.find(x=>x.label==='Distance').value,2);const d=scene.commands.find(c=>c.color==='#e28a42'&&c.kind==='line'&&c.width===2);near(length(sub(d.points[0],d.points[1])),2);});
+test('CGA null dragging follows the requested screen displacement after unitization',()=>{for(const n of [4,5])for(const perspective of [false,true]){const m=new FigureModel(definition('cga-property'),n-1),view=defaultView(n,true);view.perspective=perspective;orbit(view,n,true,80,130);const p=m.vectors[0],project=v=>screenPoint(v,view,n,true,800,500,65),space=dragSpace(m,0),retract=surfaceRetraction(m,0),q=dragOnSurface(project,p,7,-4,space,retract),a=project(p),b=project(q);near(q[n-2],1);near(m.alg.inner(m.alg.vector(q),m.alg.vector(q)),0);near(b.x-a.x,7,.1);near(b.y-a.y,-4,.1);}});

@@ -65,6 +65,6 @@ export const chapters = [
     { id:'conformal-transform', title:'Conformal Transformations', formula:`${V('p′')} = ${V('T')} ${GP} ${V('p')} ${GP} ${V('T')}<sup>−1</sup>`, ja:'Translation / Rotation / Dilation / Inversionを切り替える。Null coneを保つ変換の結果を見る。Inversionの中心では結果がPoint at infinityとなる。', en:'Observe translation, rotation, dilation, and sphere inversion on null points.', ref:'§5 · selected transformations', type:'conformal-transform' }
   ]}
 ];
-export const notice = `<div class="intro-note">このページは <a href="https://projectivegeometricalgebra.org/" target="_blank" rel="noopener">Projective Geometric Algebra Illuminated</a> に基づいていますが、一部定義の変更や簡略化をしています。このコンテンツだけでの学習は想定していません。本書と併せて、演算の結果を観察するための補助としてお使いください。<br><span class="en">Based on the book, with some adapted definitions and simplifications. A visual companion, not a standalone course.</span></div>`;
+export const notice = `<div class="intro-note">このページは <a href="https://projectivegeometricalgebra.org/" target="_blank" rel="noopener">Projective Geometric Algebra Illuminated</a> に基づいていますが、一部定義の変更や簡略化をしています。このコンテンツだけでの学習は想定していません。演算の結果を観察するための補助としてお使いください。<br><span class="en">Based on the book, with some adapted definitions and simplifications. A visual companion, not a standalone course.</span></div>`;
 import { reviseContent } from './content-revision.js';
 reviseContent(chapters,{V,E,I,S,R,L,GP,AGP});

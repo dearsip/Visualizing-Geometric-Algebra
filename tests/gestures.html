@@ -4,6 +4,9 @@
 import { Scene } from '/src/scene.js';
 import { defaultView } from '/src/camera.js';
 import { basis } from '/src/algebra.js';
+import { FigureModel } from '/src/figures.js';
+import { chapters } from '/src/content.js';
+import { dragSpace,surfaceRetraction } from '/src/lesson-revisions.js';
 const canvas=document.querySelector('canvas'),out=document.querySelector('pre');
 let point=basis(4,0,1),moved=0;const scene=new Scene(canvas,4,s=>s.handle(point,'a',0),(i,next)=>{point=next;moved++;});
 const event=(type,id,x,y,pointerType='touch',extra={})=>{const r=canvas.getBoundingClientRect();const e=new PointerEvent(type,{pointerId:id,pointerType,clientX:r.left+x,clientY:r.top+y,button:0,buttons:1,bubbles:true,cancelable:true,...extra});canvas.dispatchEvent(e);return e;};
@@ -15,20 +18,23 @@ document.querySelector('#run').addEventListener('click',()=>{const results=[];tr
  event('pointerdown',1,30,180);results.push(check(scene.pointers.size===0,'inactive touch passes through for page scrolling'));
  canvas.dispatchEvent(new MouseEvent('click',{bubbles:true}));results.push(check(scene.engaged,'tap/click activates'));
  results.push(check(wheel().defaultPrevented&&scene.view.zoom>zoom,'active wheel zooms'));
- event('pointerdown',1,30,180);event('pointermove',1,55,205);event('pointerup',1,55,205);results.push(check(scene.view.yaw<.42&&scene.view.pitch>.58,'one finger behaves as left orbit'));
+ event('pointerdown',1,30,180);event('pointermove',1,55,205);event('pointerup',1,55,205);results.push(check(!!scene.view.frame&&Math.abs(scene.view.frame[0][1]-Math.sin(.42))>.001,'one finger behaves as left orbit'));
  scene.view=defaultView(4);scene.view.extra=.4;scene.render();const yaw=scene.view.yaw,pitch=scene.view.pitch;
  event('pointerdown',11,40,220);event('pointerdown',12,160,220);const gestureZoom=scene.view.zoom;
  event('pointermove',11,20,195);event('pointermove',12,180,195);results.push(check(scene.view.extra>.4&&scene.view.zoom>gestureZoom&&scene.view.yaw===yaw&&scene.view.pitch===pitch,'two finger fold and pinch do not trigger left orbit'));
  event('pointerup',12,180,195);const before=JSON.stringify(scene.view),beforeMoves=moved;event('pointermove',11,65,260);results.push(check(JSON.stringify(scene.view)===before&&moved===beforeMoves,'remaining finger is suspended'));
  event('pointercancel',11,65,260);results.push(check(scene.pointers.size===0&&!scene.drag,'pointer cancel clears gesture'));
- scene.view=defaultView(4);point=[1,.4,.5,.3];scene.render();const tip=scene.project(point),motion=moved;event('pointerdown',1,tip.x,tip.y);event('pointermove',1,tip.x+8,tip.y-6);event('pointerup',1,tip.x+8,tip.y-6);const after=scene.project(point);results.push(check(moved>motion&&Math.abs(after.z-tip.z)<1e-5&&Math.abs(after.x-tip.x-8)<1e-3&&Math.abs(after.y-tip.y+6)<1e-3,'one-finger tip drag follows screen motion and preserves perspective depth'));
- for(const angle of [0,Math.PI/2]){scene.view=defaultView(4);scene.view.extra=angle;scene.render();const p=scene.project(point),before=[...point];event('pointerdown',6,p.x,p.y,'mouse',{button:2,shiftKey:true});event('pointermove',6,p.x,p.y-8,'mouse',{button:2,shiftKey:true});event('pointerup',6,p.x,p.y-8,'mouse',{button:2,shiftKey:true});const hidden=angle===0?3:2,visible=angle===0?2:3;results.push(check(Math.abs(point[hidden]-before[hidden])<1e-6&&Math.abs(point[visible]-before[visible])>1e-4,'Shift-right moves only the visible extra axis at '+angle));}
+ scene.view=defaultView(4);scene.view.perspective=true;point=[1,.4,.5,.3];scene.render();const tip=scene.project(point),motion=moved;event('pointerdown',1,tip.x,tip.y);event('pointermove',1,tip.x+8,tip.y-6);event('pointerup',1,tip.x+8,tip.y-6);const after=scene.project(point);results.push(check(moved>motion&&Math.abs(after.z-tip.z)<1e-5&&Math.abs(after.x-tip.x-8)<1e-3&&Math.abs(after.y-tip.y+6)<1e-3,'one-finger tip drag follows screen motion and preserves perspective depth'));
+ for(const angle of [0,.7]){scene.view=defaultView(4);scene.view.extra=angle;scene.render();const p=scene.project(point),before=[...point];event('pointerdown',6,p.x,p.y,'mouse',{button:2,shiftKey:true});event('pointermove',6,p.x,p.y-8,'mouse',{button:2,shiftKey:true});event('pointerup',6,p.x,p.y-8,'mouse',{button:2,shiftKey:true});results.push(check(point.every((x,i)=>x===before[i])&&scene.view.extra>angle,'right drag over a handle orbits without moving it at '+angle));}
  scene.view=defaultView(4);scene.render();const handle=scene.project(point);event('pointerdown',1,handle.x,handle.y);event('pointerdown',2,handle.x+90,handle.y);const moves=moved;event('pointermove',1,handle.x,handle.y-25);event('pointermove',2,handle.x+90,handle.y-25);results.push(check(moved===moves,'second finger cancels handle dragging'));
  scene.up({});scene.isCGA=true;scene.view=defaultView(5,true);scene.n=5;point=basis(5,0);scene.render();const beta=scene.view.conformal;
  event('pointerdown',1,20,180);event('pointerdown',2,110,180);event('pointermove',1,50,150);event('pointermove',2,140,150);results.push(check(scene.view.conformal>beta,'CGA two-finger horizontal exchange'));
  scene.up({});scene.n=3;scene.isCGA=false;point=basis(3,0);scene.view=defaultView(3);scene.render();const view=JSON.stringify(scene.view);event('pointerdown',4,30,220,'mouse',{button:2});event('pointermove',4,70,180,'mouse',{button:2});event('pointerup',4,70,180,'mouse',{button:2});results.push(check(JSON.stringify(scene.view)===view,'3D right background drag has no orbit'));
  canvas.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape',bubbles:true}));results.push(check(!scene.engaged&&scene.pointers.size===0,'Escape releases zoom and gestures'));
  results.push(check(getComputedStyle(canvas).touchAction==='pan-y','released touch permits page scrolling'));
+ const oldBuild=scene.build,oldChange=scene.change;
+ for(const n of [4,5]){const model=new FigureModel(chapters.flatMap(c=>c.figures).find(f=>f.type==='cga-property'),n-1);scene.n=n;scene.isCGA=true;scene.view=defaultView(n,true);scene.view.perspective=true;scene.build=s=>{s.handle(model.vectors[0],'p',0,undefined,null,false,dragSpace(model,0));s.handles.at(-1).retract=surfaceRetraction(model,0);};scene.change=(i,p)=>model.move(i,p);scene.activate();scene.render();const tip=scene.project(model.vectors[0]);event('pointerdown',20,tip.x,tip.y);event('pointermove',20,tip.x+6,tip.y-5);event('pointerup',20,tip.x+6,tip.y-5);const after=scene.project(model.vectors[0]),v=model.alg.vector(model.vectors[0]);results.push(check(Math.abs(after.x-tip.x-6)<.1&&Math.abs(after.y-tip.y+5)<.1&&Math.abs(model.alg.inner(v,v))<1e-7&&model.vectors[0][n-2]===1,n+'D null-point touch drag follows the screen and unitizes'));}
+ scene.build=oldBuild;scene.change=oldChange;scene.up({});scene.activate(false);
  out.textContent=results.join('\n')+'\n'+results.length+' / '+results.length+' passed';out.dataset.passed=results.length;
  }catch(e){out.textContent=results.join('\n')+'\nFAIL '+e.message;out.dataset.failed='true';}});
 </script></html>

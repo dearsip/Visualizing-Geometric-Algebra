@@ -25,7 +25,7 @@ export class FigureModel {
   init(){
     const t=this.def.type,n=this.n;const control=s=>this.addControl(s);
     if(t==='wedge'){this.setVectors(2);control(check('fix','Fix value'));control(select('order','Display',[[0,'a ∧ b'],[1,'b ∧ a']]));control(check('loci','Constant-product loci',true));}
-    if(t==='distribute'){this.setVectors(3);control(select('side','Display',[[0,'LHS · (a + b) ∧ c'],[1,'RHS · a ∧ c + b ∧ c']]));}
+    if(t==='distribute'){this.setVectors(3);control(check('lhs','LHS · (a + b) ∧ c',true));control(check('rhs','RHS · a ∧ c + b ∧ c',true));}
     if(t==='trivector'){this.setVectors(3);control(check('fix','Fix value'));control(select('order','Display',[[0,'a ∧ b ∧ c'],[1,'b ∧ a ∧ c']]));control(check('loci','Constant-product loci',true));}
     if(t==='basis'){control(select('basis','Basis element',this.basisChoices()));control(range('scalar','Scalar scale',-2,2,.05,1));}
     if(t==='complement'||t==='dual'){this.setVectors(1);control(select('grade','Element grade',Array.from({length:n+1},(_,k)=>[k,`${k} · ${k===n?'Antiscalar':['Scalar','Vector','Bivector','Trivector','Quadrivector'][k]}`]),1));control(select('side','Complement side',[['right','Right · overline'],['left','Left · underline']]));control(range('scalar','Scalar / Antiscalar coefficient',-3,3,.05,1));if(t==='dual')control(select('dual','Dual',[['bulk','Bulk dual ★'],['weight','Weight dual ☆']]));}
@@ -80,7 +80,7 @@ export class FigureModel {
       this.inputs(scene);let out;
       if(t==='wedge'){const order=+s.order?[vs[1],vs[0]]:vs;scene.blade(order,+s.order?'b ∧ a':'a ∧ b');out=A.blade(order);if(s.loci){vs.forEach((v,i)=>scene.locusLine(v,vs[1-i]));}}
       if(t==='trivector'){const order=+s.order?[vs[1],vs[0],vs[2]]:vs;scene.blade(order,+s.order?'b ∧ a ∧ c':'a ∧ b ∧ c');out=A.blade(order);if(s.loci)vs.forEach((v,i)=>scene.locusSpan(v,scene.orthonormal(vs.filter((_,j)=>j!==i))));}
-      if(t==='distribute'){const p=add(vs[0],vs[1]);scene.arrow(p,'a + b',colors.mesh);scene.line(vs[0],p,colors.mesh,1,true);scene.line(vs[1],p,colors.mesh,1,true);if(+s.side===0)scene.blade([p,vs[2]],'(a + b) ∧ c');else{scene.blade([vs[0],vs[2]],'a ∧ c');scene.blade([vs[1],vs[2]],'b ∧ c',{origin:vs[0]});}out=A.blade([p,vs[2]]);}
+      if(t==='distribute'){const p=add(vs[0],vs[1]);scene.arrow(p,'a + b',colors.mesh);scene.line(vs[0],p,colors.mesh,1,true);scene.line(vs[1],p,colors.mesh,1,true);if(s.lhs)scene.blade([p,vs[2]],'(a + b) ∧ c',{alpha:.09});if(s.rhs){scene.blade([vs[0],vs[2]],'a ∧ c');scene.blade([vs[1],vs[2]],'b ∧ c',{origin:vs[0]});}out=A.blade([p,vs[2]]);}
       this.row('Result',this.mv(out));this.row(t==='trivector'?'Volume':'Area',val(length(out)));if(s.fix)this.row('Constraint','Constant-product locus');
     }
     else if(t==='basis'){
@@ -97,17 +97,17 @@ export class FigureModel {
       this.formula=`${m(count%2?'F':'Q')} = ${m('gₘ')} ${AGP} ⋯ ${AGP} ${m('g₁')}`;
     }
     else if(t==='null'){
-      if(s.point)this.inputs(scene);const q=vec(0);this.row('q',this.mv(q));this.row('q • q',val(A.inner(q,q)));this.row('Metric',`${E(n-1)} • ${E(n)} = −1`);this.row('CGA dimensions',`${n}D algebra · ${n-2}D round geometry`);
+      if(s.point){this.inputs(scene);scene.handles.at(-1).retract=revised.surfaceRetraction(this,0);}const q=vec(0);this.row('q',this.mv(q));this.row('q • q',val(A.inner(q,q)));this.row('Metric',`${E(n-1)} • ${E(n)} = −1`);this.row('CGA dimensions',`${n}D algebra · ${n-2}D round geometry`);
     }
     else if(t==='cganorm'){
-      this.inputs(scene);const x=A.blade(vs),label=vs.length===2?'d':'c',info=spatialRound(scene,x,A,'\\hat{'+label+'}',colors.result),prop=cgaProperties(x,A),parts=cgaParts(x,A);revised.embeddedRound(scene,x,A,label,colors.result);
+      this.inputs(scene);scene.handles.forEach((h,i)=>h.retract=revised.surfaceRetraction(this,i));const x=A.blade(vs),label=vs.length===2?'d':'c',info=spatialRound(scene,x,A,'\\hat{'+label+'}',colors.result),prop=cgaProperties(x,A),parts=cgaParts(x,A);revised.embeddedRound(scene,x,A,label,colors.result);
       this.formula=`${V(label)} = ${['●','○','■','□'].map(s=>V(label+s)).join(' + ')}`;
       parts.forEach((part,i)=>{const symbol=['●','○','■','□'][i];if(+s.part===0||+s.part===i+1)scene.element(part,A,label+'_{'+symbol+'}',{color:[colors.a,colors.b,colors.purple,colors.c][i],dashed:true,alpha:.055});this.row(['Round bulk','Round weight','Flat bulk','Flat weight'][i], '‖'+label+'‖'+symbol+' = '+val(length(part))+'; '+this.mv(part));});
       if(info?.center){const origin=basis(n,n-2),f=removeInfinity(prop.carrier,A),q=f.alg.coordinates(f.alg.project(f.alg.vector(basis(n-1,n-2)),f.blade).result),support=affine(q);if(support){const point=[...support,0];scene.line(origin,point,colors.warm,2,true);scene.line(point,info.center,colors.purple,2,true);scene.point(point,'\\hat{sup('+label+')}',colors.warm);scene.label(scale(add(origin,point),.5),'‖'+label+'‖● / ‖'+label+'‖○',colors.warm,{dy:-9});scene.label(scale(add(point,info.center),.5),'‖'+label+'‖□ / ‖'+label+'‖○',colors.purple,{dy:15});}scene.line(origin,info.center,colors.ink,1,true);}
       this.row(label,this.mv(x));
     }
     else if(t==='conformal-transform'){
-      this.inputs(scene);const time=s.time,inf=A.vector(basis(n,n-1)),origin=A.vector(basis(n,n-2));let T,Ti,negate=false;
+      this.inputs(scene);scene.handles.forEach((h,i)=>h.retract=revised.surfaceRetraction(this,i));const time=s.time,inf=A.vector(basis(n,n-1)),origin=A.vector(basis(n,n-2));let T,Ti,negate=false;
       if(s.transform==='translation'){const shift=basis(n,0,1.4*time);shift[1]=.3*time;const term=scale(A.gp(A.vector(shift),inf),.5);T=sub(A.scalar(),term);Ti=add(A.scalar(),term);}
       else if(s.transform==='rotation'){const angle=time*Math.PI*.8;const B=indicesBlade(A,'12');T=sub(A.scalar(Math.cos(angle/2)),scale(B,Math.sin(angle/2)));Ti=A.reverse(T);}
       else if(s.transform==='dilation'){const sigma=time*Math.log(2),B=A.wedge(origin,inf);T=add(A.scalar(Math.cosh(sigma/2)),scale(B,Math.sinh(sigma/2)));Ti=sub(A.scalar(Math.cosh(sigma/2)),scale(B,Math.sinh(sigma/2)));}

@@ -16,7 +16,7 @@ export function mathTokens(text,size=18,boldVariables=true){
 }
 function tokenWidth(ctx,t){if(t.children)return t.children.reduce((w,x)=>w+tokenWidth(ctx,x),0);ctx.font=`${t.bold?'bold ':''}${t.size}px "STIX Two Math", "Cambria Math", serif`;return ctx.measureText(t.text).width;}
 function tokenExtent(ctx,t,upper){
-  if(t.children){const content=Math.max(0,...t.children.map(x=>tokenExtent(ctx,x,upper)));if(upper&&t.accent!=='underbar')return Math.max(t.size*.86,content+(t.accent==='hat'?6:3));if(!upper&&t.accent==='underbar')return Math.max(4,content+3);return content;}
+  if(t.children){const content=Math.max(0,...t.children.map(x=>tokenExtent(ctx,x,upper)));if(upper&&t.accent!=='underbar')return Math.max(t.size*.76,content+(t.accent==='hat'?6:1.5));if(!upper&&t.accent==='underbar')return Math.max(3,content+1.5);return content;}
   ctx.font=`${t.bold?'bold ':''}${t.size}px "STIX Two Math", "Cambria Math", serif`;const metric=ctx.measureText(t.text);return Math.max(0,upper?(metric.actualBoundingBoxAscent??t.size*.78)-t.dy:(metric.actualBoundingBoxDescent??t.size*.2)+t.dy);
 }
 export function measureMath(ctx,text,size=18,boldVariables=true){return mathTokens(text,size,boldVariables).reduce((w,t)=>w+tokenWidth(ctx,t),0);}

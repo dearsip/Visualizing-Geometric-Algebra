@@ -1,18 +1,21 @@
+import { supplementalHTML } from './supplement.js';
 import { chapters, notice, V, E, I, S, R, L, GP, AGP } from './content.js';
 import { Algebra, basis, formatMV, indicesBlade, basisOrder } from './algebra.js';
 import { Scene } from './scene.js';
 import { FigureModel } from './figures.js';
 import { activeInputs } from './lesson-revisions.js';
 import { defaultView } from './camera.js';
-import { mathTokens } from './math-label.js';
+import { mathTokens,drawMath,measureMath } from './math-label.js';
 const $=s=>document.querySelector(s),params=new URLSearchParams(location.search),slug=location.pathname.split('/').pop()?.replace(/\.html$/,'');
 const chapter=chapters.find(c=>c.id===(params.get('chapter')||slug))||chapters[0],index=chapters.indexOf(chapter);
 let dimension=params.get('dim')==='4'?4:3,mounts=[];
+let guideOpen=localStorage.getItem('atlas-guide-open')==='true';
 const href=(ch,anchor='')=>`./${ch.id}.html?dim=${dimension}${anchor?'#'+anchor:''}`;
 const el=(tag,cls,text)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(text!==undefined)e.textContent=text;return e;};
 function labelHTML(text){const escape=s=>s.replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));const render=tokens=>tokens.map(t=>{const body=t.children?render(t.children):escape(t.text);if(t.accent)return `<span class="${t.accent==='hat'?'hat':t.accent==='bar'?'right-complement':'left-complement'}">${body}</span>`;if(t.dy)return `<${t.dy>0?'sub':'sup'} style="font-size:${t.size/18}em">${body}</${t.dy>0?'sub':'sup'}>`;return t.bold?`<b>${body}</b>`:body;}).join('');return render(mathTokens(String(text)));}
+function equationText(node){if(node.nodeType===3)return node.textContent;const body=[...node.childNodes].map(equationText).join('');if(node.nodeName==='BR')return '\n';if(node.nodeName==='SUP')return `^{${body}}`;if(node.nodeName==='SUB')return `_{${body}}`;for(const [css,command] of [['right-complement','bar'],['left-complement','underbar'],['hat','hat']])if(node.classList?.contains(css))return `\\${command}{${body}}`;return body;}
 document.title=`${chapter.title} · Geometric Algebra Visual Atlas`;
-$('#intro').innerHTML=`<p class="eyebrow">${index===0?'AN INTERACTIVE COMPANION':chapter.group.toUpperCase()}　 /　 ${String(index+1).padStart(2,'0')}</p><div class="intro-grid"><div><h1>${index===0?'See the algebra.<br><em>Move the geometry.</em>':chapter.title}</h1><p class="intro-copy">${chapter.ja}<br><span class="en">${chapter.subtitle}</span></p></div>${notice}</div>`;
+$('#intro').innerHTML=`<p class="eyebrow">${chapter.group}　 /　 ${String(index+1).padStart(2,'0')}</p><div class="intro-grid"><div><h1>${chapter.title}</h1></div>${notice}</div>`;
 $('#help-button').addEventListener('click',()=>$('#controls-dialog').showModal());
 $('#controls-dialog').addEventListener('click',e=>{if(e.target===$('#controls-dialog'))$('#controls-dialog').close();});
 function navigation(){let group='';$('#navigation').replaceChildren();chapters.forEach((ch,i)=>{if(ch.group!==group){$('#navigation').append(el('div','nav-group',ch.group));group=ch.group;}const link=el('a',`nav-link${ch===chapter?' active':''}`);link.href=href(ch);link.innerHTML=`<span class="nav-num">${String(i+1).padStart(2,'0')}</span><span>${ch.title}</span>`;if(ch===chapter)link.setAttribute('aria-current','page');$('#navigation').append(link);});
@@ -31,12 +34,13 @@ function renderControls(mount){
     else if(spec.type==='select'){input=el('select');for(const [value,text] of spec.options){const opt=el('option','',text);opt.value=value;input.append(opt);}input.value=model.state[spec.key];row.append(label,input);}
     else{input=el('input');input.type='range';input.min=spec.min;input.max=spec.max;input.step=spec.step;input.value=model.state[spec.key];const wrap=el('div','range-row'),out=el('output','',Number(input.value).toFixed(spec.key==='frame'?0:2));input.addEventListener('input',()=>out.textContent=Number(input.value).toFixed(spec.key==='frame'?0:2));wrap.append(input,out);row.append(label,wrap);}
     input.id=id;input.dataset.control=spec.key;
-    input.addEventListener(spec.type==='range'?'input':'change',()=>{let value=spec.type==='check'?input.checked:spec.type==='range'?+input.value:input.value;model.update(spec.key,value);if(['grade','count','pair','case','flat','flatA','flatB'].includes(spec.key))renderControls(mount);mount.scene.render();});side.append(row);
+    input.addEventListener(spec.type==='range'?'input':'change',()=>{let value=spec.type==='check'?input.checked:spec.type==='range'?+input.value:input.value;model.update(spec.key,value);if(['grade','count','pair','case','flat','flatA','flatB','preset','fix'].includes(spec.key))renderControls(mount);mount.scene.render();});side.append(row);
   }
   if(model.def.type==='basis'){}else activeInputs(model).forEach(i=>{const v=model.vectors[i];
     const block=el('div','coord-editor');block.append(el('div','coord-label',`${model.names[i]||String.fromCharCode(97+i)} · coordinates`));const grid=el('div','coord-inputs');grid.style.gridTemplateColumns=`repeat(${model.n},minmax(0,1fr))`;
     v.forEach((value,j)=>{const label=el('label','',['x','y','z','w','u'][j]),input=el('input');input.type='number';input.step='.05';input.value=Number(value.toFixed(2));input.dataset.vector=i;input.dataset.coordinate=j;input.setAttribute('aria-label',`${model.names[i]} ${['x','y','z','w','u'][j]}`);
       if(model.cga&&model.def.type!=='roundpoint'&&j>=model.n-2){input.readOnly=true;input.title='Null point · dependent coordinate';}
+      if(model.state.fix&&['geometric','projective-product'].includes(model.def.type))input.disabled=true;
       const edit=()=>{const val=input.valueAsNumber;if(!Number.isFinite(val))return;const next=[...model.vectors[i]];next[j]=Math.max(-6,Math.min(6,val));model.move(i,next);mount.scene.render();if(input!==document.activeElement)input.value=Number(model.vectors[i][j].toFixed(2));};input.addEventListener('input',edit);input.addEventListener('change',edit);label.append(input);grid.append(label);});block.append(grid);side.append(block);
   });
   mount.result=el('div','result');side.append(mount.result);
@@ -60,11 +64,11 @@ function dimensionName(def,dim){
 }
 function interactionGuide(model){
   const extra=model.n>3;
-  return '<b>Left drag / 1 finger</b> Rotate · 回転'+(extra?' (extra axes fixed · 追加軸の表示方向は固定)':' (e₃ upright · e₃は上)')+
-    (extra?'<br><b>Right ↑↓ / 2 fingers ↑↓</b> Fold extra axes upward · 追加軸を上へ（0–90°）':'<br><b>Right drag</b> No orbit · 回転なし')+
-    (model.cga?'<br><b>Right ←→ / 2 fingers ←→</b> Exchange origin / infinity axes · 追加の二軸を切替':extra?'<br><b>Right ←→ / 2 fingers ←→</b> No orbit · 回転なし':'')+
-    '<br><b>Tip drag</b> Move · 移動　<b>Shift + left / right</b> xy / other axes'+
-    '<br><b>Click / tap</b> Activate wheel / pinch · ズーム操作を有効化　<b>Esc / tap outside</b> Release';
+  return '<b>Left drag / 左ドラッグ · 1 finger / 一本指</b> Rotate / 回転'+(extra?' — free spatial rotation / 自由回転':' — e₃ upright / e₃を上に保つ')+
+    (extra?'<br><b>Right ↑↓ / 右ドラッグ上下 · 2 fingers / 二本指</b> Extra-axis latitude / 現在の上方向と追加軸の緯度（0–90°）':'<br><b>Right drag / 右ドラッグ</b> No orbit / 回転なし')+
+    (model.cga?'<br><b>Right ←→ / 右ドラッグ左右 · 2 fingers / 二本指</b> Exchange origin / infinity axes / 追加の二軸を切替（0–90°）':'')+
+    '<br><b>Tip drag / 先端を左ドラッグ</b> Move / 移動　<b>Shift + left / Shift + 左ドラッグ</b> xy plane / xy平面'+
+    '<br><b>Click / tap / クリック・タップ</b> Activate wheel / pinch / ズームを有効化　<b>Esc / tap outside / 図の外をタップ</b> Release / 解除';
 }
 function mountFigure(def,i){
   const fixedDimension=def.id==='plane'||def.id==='sphere';
@@ -78,12 +82,12 @@ function mountFigure(def,i){
   const body=el('div','figure-body'),wrap=el('div','canvas-wrap'),canvas=el('canvas','scene-canvas');canvas.tabIndex=0;
   canvas.setAttribute('aria-label',def.title+': drag vector tips, use the coordinate inputs, or press Home to reset the view.');canvas.setAttribute('role','img');
   canvas.textContent='Interactive diagram. Coordinates and values are available alongside the canvas.';
-  const viewLabel=el('div','axes-view'),guide=el('div','canvas-guide');wrap.append(canvas,viewLabel,guide);
+  const viewLabel=el('div','axes-view'),guide=el('details','canvas-guide'),guideTitle=el('summary','','Controls / 操作説明'),guideBody=el('div');guide.open=guideOpen;guide.append(guideTitle,guideBody);guide.addEventListener('toggle',()=>{if(guide.open===guideOpen)return;guideOpen=guide.open;localStorage.setItem('atlas-guide-open',String(guideOpen));document.querySelectorAll('.canvas-guide').forEach(g=>g.open=guideOpen);});wrap.append(canvas,viewLabel,guide);
   const toolbar=el('div','canvas-tools'),viewButton=el('button','','View ↺'),reset=el('button','','Reset'),activation=el('button','','Activate zoom'),projection=el('select'),exportButton=el('button','','PNG');
   projection.setAttribute('aria-label',def.title+' camera projection');projection.innerHTML='<option value="perspective">Perspective</option><option value="orthographic">Orthographic</option>';
   toolbar.append(projection,activation,viewButton,reset,exportButton);wrap.append(toolbar);
   const side=el('div','figure-side');body.append(wrap,side);article.append(body);
-  const caption=el('div','figure-caption');caption.innerHTML=`${def.ja}<br><span class="en">${def.en}</span><div class="legend"><span>CCW / inward orientation</span><span>opposite orientation</span><span>dependent factors / loci · dashed</span></div><p class="reference">${def.ref}</p>`;
+  const caption=el('div','figure-caption');caption.innerHTML=`${def.ja}<br><span class="en">${def.en}</span><p class="reference">${def.ref}</p>`;
   article.append(caption);$('#figures').append(article);
   const mount={article,canvas,side,equation:eq,saved:new Map()};mounts.push(mount);
   function selectDimension(dim){
@@ -95,50 +99,36 @@ function mountFigure(def,i){
     mount.scene.isCGA=model.cga;mount.scene.section=def.type==='null';mount.scene.view=saved?.view||defaultView(model.n,model.cga,mount.scene.section);
     mount.scene.onActivation=value=>{activation.textContent=value?'Release zoom':'Activate zoom';activation.setAttribute('aria-pressed',String(value));};mount.scene.activate(false);
     projection.value=mount.scene.view.perspective?'perspective':'orthographic';
-    viewLabel.textContent=model.n+'D → 3D';guide.innerHTML=interactionGuide(model);
+    viewLabel.textContent=model.n+'D → 3D';guideBody.innerHTML=interactionGuide(model);
     buttons.forEach(b=>{const active=+b.dataset.figureDim===dim;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
     mount.scene.render();
   }
-  buttons.forEach(b=>b.addEventListener('click',()=>selectDimension(+b.dataset.figureDim)));
+  mount.selectDimension=selectDimension;mount.fixedDimension=fixedDimension;
+  buttons.forEach(b=>b.addEventListener('click',()=>setDimension(+b.dataset.figureDim)));
   projection.addEventListener('change',()=>{mount.scene.view.perspective=projection.value==='perspective';mount.scene.render();});
   let requestedActivation;activation.addEventListener('pointerdown',()=>{requestedActivation=activation.getAttribute('aria-pressed')!=='true';});
   activation.addEventListener('click',()=>{const next=requestedActivation??activation.getAttribute('aria-pressed')!=='true';requestedActivation=undefined;if(next)canvas.focus({preventScroll:true});mount.scene.activate(next);});
   viewButton.addEventListener('click',()=>mount.scene.resetView());
   reset.addEventListener('click',()=>{mount.playing=false;cancelAnimationFrame(mount.animation);mount.model.reset();mount.scene.factorFrames.clear();renderControls(mount);mount.scene.render();});
   exportButton.addEventListener('click',()=>{
-    const copy=document.createElement('canvas');copy.width=canvas.width;copy.height=canvas.height+110;
-    const ctx=copy.getContext('2d');ctx.fillStyle='#fcfbf7';ctx.fillRect(0,0,copy.width,copy.height);ctx.fillStyle='#173e35';ctx.font='24px "STIX Two Math"';ctx.fillText(def.title+' · '+dimensionName(def,mount.dimension),18,32);ctx.font='20px "STIX Two Math"';ctx.fillText(eq.textContent,18,65);ctx.drawImage(canvas,0,95);
+    const lines=equationText(eq).split('\n'),copy=document.createElement('canvas');copy.width=canvas.width;const ctx=copy.getContext('2d'),titles=[''];ctx.font='24px "STIX Two Math"';for(const word of def.title.split(' ')){const i=titles.length-1,next=(titles[i]+' '+word).trim();if(titles[i]&&ctx.measureText(next).width>copy.width-36)titles.push(word);else titles[i]=next;}const equationY=titles.length*29+47,header=equationY+lines.length*28+8;copy.height=canvas.height+header;
+    ctx.fillStyle='#fcfbf7';ctx.fillRect(0,0,copy.width,copy.height);ctx.fillStyle='#173e35';ctx.font='24px "STIX Two Math"';titles.forEach((title,i)=>ctx.fillText(title,18,30+i*29));ctx.font='16px "STIX Two Math"';ctx.fillText(dimensionName(def,mount.dimension),18,titles.length*29+23);lines.forEach((line,i)=>{const width=measureMath(ctx,line,20),size=Math.min(20,20*(copy.width-36)/width);drawMath(ctx,line,18,equationY+i*28,size,'#173e35');});ctx.drawImage(canvas,0,header);
     const dialog=el('dialog','diagram-export'),close=el('button','','Close'),img=el('img'),save=el('a','','Save PNG');img.src=copy.toDataURL('image/png');img.alt=def.title+' diagram';save.href=img.src;save.download=def.id+'.png';dialog.append(close,save,img);document.body.append(dialog);close.addEventListener('click',()=>{dialog.close();dialog.remove();});dialog.showModal();
   });
   selectDimension(fixedDimension?4:dimension);
 }
 function render(){
   for(const mount of mounts){mount.scene.dispose();cancelAnimationFrame(mount.animation);mount.playing=false;}mounts=[];$('#figures').replaceChildren();navigation();
-  $('#chapter-caption').textContent=chapter.group+' / '+chapter.figures.length+' studies';
+  $('#chapter-caption').textContent='';
   document.querySelectorAll('[data-dim]').forEach(b=>{b.textContent=dimensionName(chapter.figures[0],+b.dataset.dim);b.classList.toggle('active',+b.dataset.dim===dimension);b.setAttribute('aria-pressed',String(+b.dataset.dim===dimension));});
   chapter.figures.forEach(mountFigure);supplement();
   document.fonts.ready.then(()=>mounts.forEach(m=>m.scene.render()));
 }
-document.querySelectorAll('[data-dim]').forEach(b=>b.addEventListener('click',()=>{const scroll=window.scrollY;dimension=+b.dataset.dim;const url=new URL(location.href);url.searchParams.set('dim',dimension);history.replaceState(null,'',url);render();window.scrollTo(0,scroll);}));
+function setDimension(dim){dimension=dim;const url=new URL(location.href);url.searchParams.set('dim',dim);history.replaceState(null,'',url);for(const m of mounts)m.selectDimension(m.fixedDimension?4:dim);document.querySelectorAll('[data-dim]').forEach(b=>{const on=+b.dataset.dim===dim;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});navigation();supplement();}
+document.querySelectorAll('[data-dim]').forEach(b=>b.addEventListener('click',()=>setDimension(+b.dataset.dim)));
 document.addEventListener('pointerdown',e=>{for(const m of mounts)if(e.target!==m.canvas&&!m.article.querySelector('.canvas-tools').contains(e.target))m.scene.activate(false);});
-function supplement(){
-  let html='';const n=dimension;
-  if(chapter.id==='complements'){
-    html=`<div class="formula-block"><h3>Grade / Antigrade</h3><div class="equation">gr(${V('u')}) + ag(${V('u')}) = ${n}</div><table><tr><th>Grade</th><th>Element</th><th>Antigrade</th></tr>${Array.from({length:n+1},(_,k)=>`<tr><td>${k}</td><td>${k===0?'Scalar':k===n?'Antiscalar':['','Vector','Bivector','Trivector'][k]}</td><td>${n-k}</td></tr>`).join('')}</table><p>𝟙 = ${Array.from({length:n},(_,i)=>E(i+1)).join(' ∧ ')}. The orientation is a choice fixed here. / Antiscalarの向きは選択で、ここではこの順序に固定します。</p><div class="equation">Anti-operation:　f̄(${V('a')}, ${V('b')}) = <span class="left-complement">f(${R('a')}, ${R('b')})</span></div></div>`;
-  }
-  if(chapter.id==='euclidean'){
-    html=`<div class="formula-block"><h3>Euclidean metric & inverse</h3><div class="equation">${E('i')} · ${E('j')} = δ<sub>ij</sub>　　${V('a')}<sup>−1</sup> = ${V('a')} / (${V('a')} · ${V('a')})　(${V('a')} ≠ 0)</div><p>A nonzero Euclidean vector has an inverse, including when a · b = 0. / 非零vectorにはinverseがあり、a · b = 0の場合も成り立ちます。</p><h3>Reverse</h3><p>Reverse the order of basis-vector products, then extend linearly. / Basis elementを作るvectorの積の順序を逆にし、線形に拡張します。</p><div class="equation">(${E('i')} ∧ ${E('j')} ∧ ⋯ ∧ ${E('k')})<sup>~</sup> = ${E('k')} ∧ ⋯ ∧ ${E('j')} ∧ ${E('i')}</div><div class="table-controls"><label for="table-operation">Multiplication table</label><select id="table-operation"><option value="gp">Geometric product</option><option value="reverse">Reverse × geometric product</option></select></div><div class="table-scroll" id="multiplication-table"></div></div>`;
-  }
-  if(chapter.id==='flat'){
-    html=`<div class="formula-block"><h3>Bulk / Weight</h3><p>Bulk: basis terms without ${E(n)}. Weight: basis terms containing ${E(n)}.<br>${E(n)}を含まない項がBulk、含む項がWeight。この記述は標準の退化metricでの簡略化です。</p><div class="equation">${V('u')}<sub>●</sub> = G${V('u')}　　${V('u')}<sub>○</sub> = 𝔾${V('u')}　　G + 𝔾 = identity</div><div class="equation">g = diag(1, …, 1, 0)　　g${E('i')} = ${E('i')} (i &lt; ${n}),　g${E(n)} = 0</div><div class="equation">G(${V('a')} ∧ ${V('b')}) = (G${V('a')}) ∧ (G${V('b')})</div><div class="equation">𝔾 = <span class="left-complement">G<span class="right-complement">( · )</span></span>　　G𝔾 = 𝔾G = 0</div><table><tr><th>Object</th><th>Bulk</th><th>Weight</th></tr><tr><td>Point</td><td>Position</td><td>Homogeneous weight</td></tr><tr><td>Line</td><td>Moment</td><td>Direction</td></tr><tr><td>Plane · 4D</td><td>Offset from origin</td><td>Normal / orientation</td></tr></table><p>Only nonzero homogeneous elements represent projective objects. / Zero elementはprojective objectを表しません。表示用のHorizonの円・球は、方向を置く境界です。有限のunit sliceの境界と無限遠そのものは同じ点ではありません。</p></div>`;
-  }
-  if(chapter.id==='measure')html=`<div class="formula-block"><h3>Metric definitions</h3><div class="equation">${V('a')} • ${V('b')} = (${V('a')}<sup>T</sup>G${V('b')})${S}　　${V('a')} ∘ ${V('b')} = (${V('a')}<sup>T</sup>𝔾${V('b')})${I}</div><p>Dot compares bulk; Antidot compares weight. / Dotはbulk、Antidotはweightを比べます。</p><h3>Geometric Norm / Homogeneous magnitude</h3><div class="equation">‖${V('u')}‖<sub>●</sub> = √(${V('u')}<sup>T</sup>G${V('u')})${S}　　‖${V('u')}‖<sub>○</sub> = √(${V('u')}<sup>T</sup>𝔾${V('u')})${I}　　‖${V('u')}‖ = ‖${V('u')}‖<sub>●</sub> + ‖${V('u')}‖<sub>○</sub></div></div>`;
-  if(chapter.id==='distance')html=`<div class="formula-block"><h3>Homogeneous distance · (2.98)</h3><div class="equation">d(${V('a')}, ${V('b')}) = ‖att(${V('a')} ∧ ${V('b')})‖<sub>●</sub>${S} + ‖${V('a')} ∧ att(${V('b')})‖<sub>○</sub>${I}</div><p>Projecting a homogeneous magnitude means taking the scalar coefficient divided by the antiscalar coefficient. / 表示されたscalar係数をantiscalar係数で割ると、投影した距離になります。</p></div>`;
-  if(chapter.id==='projective-products'||chapter.id==='transforms')html=`<div class="formula-block"><h3>Products with the projective metric</h3><div class="equation">${V('a')} ${GP} ${V('b')} = (${V('a')} • ${V('b')}) + ${V('a')} ∧ ${V('b')}</div><div class="equation">${V('A')} ${AGP} ${V('B')} = <span class="left-complement">${R('A')} ${GP} ${R('B')}</span></div><div class="equation">${V('g')} = ${L('a')}　　${V('v₁')} = ${V('g')} ${AGP} ${V('v₀')} ${AGP} ${V('g')} / (${V('a')} • ${V('a')})</div><p>The second formula holds for all multivectors; the first displayed decomposition is for vectors. / 一つ目の分解式はvectorの場合。Antiproductの定義は一般のmultivectorに対して使えます。<br>In 2D and 3D Euclidean space, proper isometries have motor representations; orientation-reversing isometries have flector representations. Flectors live in a different connected component from the identity. / 2Dでも3Dでも、向きを保つEuclidean isometryはMotor、反転させるものはFlectorで表せます。2DのMotorには回転と平行移動、Flectorには鏡映と映進が含まれます。鏡映をidentityから連続なisometryだけで補間することはできません。</p></div>`;
-  if(chapter.group.includes('CGA'))html=`<div class="formula-block"><h3>Conformal notation</h3><div class="equation">𝔾 = −G　　${V('u')}<sup>☆</sup> = −${V('u')}<sup>★</sup>　　${V('a')} ∘ ${V('b')} = −<span class="right-complement">${V('a')} • ${V('b')}</span></div><div class="equation">car(${V('u')}) = ${V('u')} ∧ ${E(n+1)}　　ccr(${V('u')}) = ${V('u')}<sup>☆</sup> ∧ ${E(n+1)}</div><div class="equation">con(${V('u')}) = ${V('u')} ∧ car(${V('u')})<sup>☆</sup></div><div class="equation">par(${V('u')}) = (−1)<sup>gr(u)+1</sup> con(${V('u')}<sup>☆</sup>) ∨ car(${V('u')})</div><div class="equation">att(${V('u')}) = ${V('u')} ∨ <span class="right-complement">${E(n)}</span>　　${V('u')}<sup>†</sup> = ${V('u')}<sub>●</sub> + ${V('u')}<sub>○</sub> − ${V('u')}<sub>■</sub> − ${V('u')}<sub>□</sub></div><p>${n===3?'2D Round Geometry: e₃ is the origin axis, e₄ is infinity.':'3D Round Geometry: e₄ is the origin axis, e₅ is infinity.'} / 追加軸はorigin axis / Point at infinityです。図の長さはそれぞれ1/√2、√2ですが、計量上の長さではありません。</p><p>${E(n+1)} is the direction-independent point at infinity. An element with it as a wedge factor represents Flat Geometry. / ${E(n+1)}は向きに依存しない特殊な無限遠点。Wedgeのfactorとして含むelementはFlat Geometryです。</p><p>Carrier is the smallest flat geometry containing the object. Cocarrier is perpendicular and passes through its center. Container is the smallest containing circle / sphere. / Carrierは最小のFlat geometry、Cocarrierはそれに直交して中心を通るもの、Containerは最小のCircle / Sphere。</p><p>Round point radius uses +r² in its infinity coefficient; sphere-vector (dual) conventions often use −r². / 本書のRound pointは無限遠成分に+r²を使います。</p></div>`;
-  $('#supplement').innerHTML=html;if(chapter.id==='transforms')$('#figures').before($('#supplement'));
-  if(chapter.id==='euclidean'){const draw=()=>{const alg=new Algebra(n),bs=basisOrder(n),op=$('#table-operation').value;$('#multiplication-table').innerHTML=`<table class="multiplication"><thead><tr><th>⟑</th>${bs.map(s=>`<th>${s.length===n?'𝟙':s?E(s):S}</th>`).join('')}</tr></thead><tbody>${bs.map(x=>`<tr><th>${x.length===n?'𝟙':x?E(x):S}</th>${bs.map(y=>`<td>${formatMV(alg.gp(op==='reverse'?alg.reverse(indicesBlade(alg,x)):indicesBlade(alg,x),indicesBlade(alg,y)),alg)}</td>`).join('')}</tr>`).join('')}</tbody></table>`;};$('#table-operation').addEventListener('change',draw);draw();}
-}
+function supplement(){$('#supplement').innerHTML=supplementalHTML(chapter,dimension);}
+
 render();
 if(location.hash)requestAnimationFrame(()=>document.getElementById(location.hash.slice(1))?.scrollIntoView());
 // Read-only developer hook for the local numerical/browser verification suite.
