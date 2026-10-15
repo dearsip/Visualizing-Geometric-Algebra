@@ -1,5 +1,5 @@
 export const V = x => `<span class="mv">${x.replace(/[●○■□]/g,s=>`<sub class="component-symbol">${s}</sub>`)}</span>`;
-export const E = x => `<span class="mv">e<sub>${x}</sub></span>`;
+export const E = x => `<span class="mv"><span class="basis-letter">e</span><sub>${x}</sub></span>`;
 export const I = '<span class="mv">𝟙</span>';
 export const S = V('1');
 export const R = x => `<span class="right-complement">${V(x)}</span>`;

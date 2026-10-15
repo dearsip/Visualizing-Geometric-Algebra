@@ -45,7 +45,6 @@ export function spatialRound(scene,a,alg,label,color,options={}) {
   else if(dirs.length===1){scene.point(add(center,scale(dirs[0],r)),label,color,5);scene.point(add(center,scale(dirs[0],-r)),'',color,5);scene.line(add(center,scale(dirs[0],-r)),add(center,scale(dirs[0],r)),color,1,true,.5);}
   else if(dirs.length===2){scene.circle(center,dirs[0],dirs[1],r,color,imaginary,.95);scene.label(add(center,scale(dirs[0],r)),label,color,{dy:-10});}
   else if(dirs.length>=3){scene.sphere(center,r,color,true,.8,dirs);scene.label(center,label,color,{dy:-15});}
-  if(imaginary)scene.label(center,'Imaginary',color,{dy:19,size:10});
   if(options.radius){const direction=dirs[0]||basis(alg.n,0);scene.line(center,add(center,scale(direction,r)),color,2);scene.label(add(center,scale(direction,r*.5)),imaginary?'|r|':'r',color,{dy:15,size:16,scalar:true});}
   return info;
 }

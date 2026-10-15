@@ -29,3 +29,16 @@ This is a development record, excluded from the public site.
 - [x] Grade-selectable sandwich diagrams, unit-slice invariant surfaces, complete antiproduct equality, motor/flector presets.
 - [x] Concept-by-concept CGA diagrams, later norms, additional containment grades/flats, normalized null-surface dragging.
 - [x] 143 numerical checks and 18 browser input checks; desktop/mobile rendering; reference material excluded.
+
+## Follow-up revision 2026-10-16
+
+- [x] Remove zoom buttons and redundant projection captions; keep unit-slice constraint enabled by default.
+- [x] Left/right bilinearity selector, requested captions and formula accents, quieter rotation defaults.
+- [x] Flat view centred at half the projective axis; dotted unit-slice axes; 180-degree extra-axis fold.
+- [x] Grade-aware distance options, homogeneous angle equality and intermediate duals, minimal projection factor names.
+- [x] Figure 3.13 displacement shading and equal-displacement surfaces in the unit slice, including perspective rendering.
+- [x] Upright CGA axis exchange; Null Cone section ends with origin up and negative infinity forward, with the hidden spatial axis excluded.
+- [x] Stable null-surface dragging near projected tangent singularities.
+- [x] Round Point carrier line, tangent/parallel planes, embedded section, spatial projection and radius toggles.
+- [x] Raw carrier/cocarrier representations; fixed infinity factor in Make Flat; conformal notation only on Construction.
+- [x] 149 numerical checks, 22 browser input checks, all 20 chapters in both dimensions on desktop and at 375px width; no console errors or horizontal overflow. Physical phone operation remains unverified.

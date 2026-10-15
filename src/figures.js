@@ -25,7 +25,7 @@ export class FigureModel {
   init(){
     const t=this.def.type,n=this.n;const control=s=>this.addControl(s);
     if(t==='wedge'){this.setVectors(2);control(check('fix','Fix value'));control(select('order','Display',[[0,'a ∧ b'],[1,'b ∧ a']]));control(check('loci','Constant-product loci',true));}
-    if(t==='distribute'){this.setVectors(3);control(check('lhs','LHS · (a + b) ∧ c',true));control(check('rhs','RHS · a ∧ c + b ∧ c',true));}
+    if(t==='distribute'){this.setVectors(3);control(select('linearity','Linearity',[['left','(a + b) ∧ c'],['right','a ∧ (b + c)']]));control(check('lhs','LHS',true));control(check('rhs','RHS',true));}
     if(t==='trivector'){this.setVectors(3);control(check('fix','Fix value'));control(select('order','Display',[[0,'a ∧ b ∧ c'],[1,'b ∧ a ∧ c']]));control(check('loci','Constant-product loci',true));}
     if(t==='basis'){control(select('basis','Basis element',this.basisChoices()));control(range('scalar','Scalar scale',-2,2,.05,1));}
     if(t==='complement'||t==='dual'){this.setVectors(1);control(select('grade','Element grade',Array.from({length:n+1},(_,k)=>[k,`${k} · ${k===n?'Antiscalar':['Scalar','Vector','Bivector','Trivector','Quadrivector'][k]}`]),1));control(select('side','Complement side',[['right','Right · overline'],['left','Left · underline']]));control(range('scalar','Scalar / Antiscalar coefficient',-3,3,.05,1));if(t==='dual')control(select('dual','Dual',[['bulk','Bulk dual ★'],['weight','Weight dual ☆']]));}
@@ -80,7 +80,7 @@ export class FigureModel {
       this.inputs(scene);let out;
       if(t==='wedge'){const order=+s.order?[vs[1],vs[0]]:vs;scene.blade(order,+s.order?'b ∧ a':'a ∧ b');out=A.blade(order);if(s.loci){vs.forEach((v,i)=>scene.locusLine(v,vs[1-i]));}}
       if(t==='trivector'){const order=+s.order?[vs[1],vs[0],vs[2]]:vs;scene.blade(order,+s.order?'b ∧ a ∧ c':'a ∧ b ∧ c');out=A.blade(order);if(s.loci)vs.forEach((v,i)=>scene.locusSpan(v,scene.orthonormal(vs.filter((_,j)=>j!==i))));}
-      if(t==='distribute'){const p=add(vs[0],vs[1]);scene.arrow(p,'a + b',colors.mesh);scene.line(vs[0],p,colors.mesh,1,true);scene.line(vs[1],p,colors.mesh,1,true);if(s.lhs)scene.blade([p,vs[2]],'(a + b) ∧ c',{alpha:.09});if(s.rhs){scene.blade([vs[0],vs[2]],'a ∧ c');scene.blade([vs[1],vs[2]],'b ∧ c',{origin:vs[0]});}out=A.blade([p,vs[2]]);}
+      if(t==='distribute'){const right=s.linearity==='right',i=right?1:0,j=right?2:1,p=add(vs[i],vs[j]),fixed=vs[right?0:2],sumName=right?'b + c':'a + b';scene.arrow(p,sumName,colors.mesh);scene.line(vs[i],p,colors.mesh,1,true);scene.line(vs[j],p,colors.mesh,1,true);if(s.lhs)scene.blade(right?[fixed,p]:[p,fixed],right?'a ∧ (b + c)':'(a + b) ∧ c',{alpha:.09});if(s.rhs){scene.blade(right?[fixed,vs[i]]:[vs[i],fixed],right?'a ∧ b':'a ∧ c');scene.blade(right?[fixed,vs[j]]:[vs[j],fixed],right?'a ∧ c':'b ∧ c',{origin:vs[i]});}out=A.blade(right?[fixed,p]:[p,fixed]);this.formula=right?`${a} ∧ (${b} + ${c}) = ${a} ∧ ${b} + ${a} ∧ ${c}`:`(${a} + ${b}) ∧ ${c} = ${a} ∧ ${c} + ${b} ∧ ${c}`;}
       this.row('Result',this.mv(out));this.row(t==='trivector'?'Volume':'Area',val(length(out)));if(s.fix)this.row('Constraint','Constant-product locus');
     }
     else if(t==='basis'){

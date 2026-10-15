@@ -23,7 +23,7 @@ export class Scene {
   }
   dispose(){this.resize.disconnect();for(const [e,f,o] of this.listeners)this.canvas.removeEventListener(e,f,o);}
   activate(value=true){this.engaged=value;if(!value)this.up({});this.canvas.classList.toggle('interactive',value);this.onActivation?.(value);}
-  resetView(){const perspective=this.view.perspective;this.view=defaultView(this.n,this.isCGA,this.section);this.view.perspective=perspective;this.render();}
+  resetView(){const perspective=this.view.perspective;this.view=defaultView(this.n,this.isCGA,this.section,this.flatGeometry);this.view.perspective=perspective;this.render();}
   project(p){return screenPoint(p,this.view,this.n,this.isCGA,this.w,this.h,this.s);}
   toDisplay(p){return toView(p,{...this.view,frame:null,yaw:0,pitch:0,roll:0},this.n,this.isCGA);}
   line(a,b,color=colors.ink,width=1,dash=false,alpha=1){this.commands.push({kind:'line',points:[a,b],color,width,dash,alpha});}
@@ -97,6 +97,7 @@ export class Scene {
     else{
       this.sphere(Z(n),r,colors.mesh,true,.4);this.sphere(center,r,colors.mesh,true,.4,null,{mesh:true,fill:true});
     }
+    for(let j=0;j<h;j++)this.line(add(center,basis(n,j,-r)),add(center,basis(n,j,r)),colors.mesh,1,true,.7);
     if(this.sliceLabels){this.label(add(center,basis(n,0,-2.8)),n===3?'z = 1':'w = 1',colors.mesh,{size:16});this.label(basis(n,0,-3.2),'Horizon',colors.mesh,{dy:20,size:16});}
   }
   // Intersect a linear homogeneous subspace with h = 1, then clip to the display ball.
@@ -129,11 +130,12 @@ export class Scene {
     for(const radius of [.8,1.6,2.4]){let previous=null;for(let j=0;j<=64;j++){const t=j*Math.PI/32,p=Z(this.n);p[0]=radius*Math.cos(t);p[w]=radius*(1+Math.sin(t))/2;p[u]=radius*(1-Math.sin(t));if(previous)this.line(previous,p,colors.green,.9,true,.45);previous=p;}}
     // Orthogonal spatial parabola sections and their homogeneous rays form the cone.
     for(let axis=0;axis<m;axis++){
+      if(section&&this.n===4&&axis===1)continue;
       for(let weight of [.5,1,1.8]){let previous=null;for(let x=-2;x<=2.001;x+=.1){const spatial=Array(m).fill(0);spatial[axis]=x;const p=point(spatial,weight);if(previous)this.line(previous,p,weight===1?colors.purple:colors.green,weight===1?2.3:.8,weight!==1,.7);previous=p;}}
       for(let x of [-1.7,-.85,.85,1.7]){const spatial=Array(m).fill(0);spatial[axis]=x;const p=point(spatial);this.line(Z(this.n),scale(p,1.7),colors.green,.8,true,.35);}
     }
-    for(let fixed=-1.6;fixed<=1.6;fixed+=.8)for(let swap=0;swap<2;swap++){let previous=null;for(let x=-2;x<=2.001;x+=.12){const spatial=Array(m).fill(0);spatial[swap]=x;spatial[1-swap]=fixed;const p=point(spatial);if(previous)this.line(previous,p,colors.purple,.8,true,.35);previous=p;}}
-    const center=basis(this.n,w);this.disk(center,[basis(this.n,0),basis(this.n,u)],2.7,'#c3af52',.03,true);
+    if(!(section&&this.n===4))for(let fixed=-1.6;fixed<=1.6;fixed+=.8)for(let swap=0;swap<2;swap++){let previous=null;for(let x=-2;x<=2.001;x+=.12){const spatial=Array(m).fill(0);spatial[swap]=x;spatial[1-swap]=fixed;const p=point(spatial);if(previous)this.line(previous,p,colors.purple,.8,true,.35);previous=p;}}
+    const center=basis(this.n,w);if(section)this.disk(center,[basis(this.n,0),basis(this.n,u)],2.7,'#c3af52',.03,true);else if(this.n===4)this.disk(center,[basis(this.n,0),basis(this.n,1)],2.7,'#c3af52',.03,true);else this.sphere(center,2.7,'#c3af52',true,.4,null,{mesh:true});
     if(section){this.label(point([1.8],1.8),'Null Cone',colors.green,{dx:7,dy:-15,size:17});this.label(point([-1.5]),'Horosphere',colors.purple,{dx:-12,dy:-15,size:17});}
   }
   angle(a,b){if(length(a)<EPS||length(b)<EPS)return;const u=unit(a);let v=sub(unit(b),scale(u,dot(u,unit(b))));if(length(v)<EPS){if(dot(unit(a),unit(b))>=0)return;const candidates=this.orthonormal(Array.from({length:this.n},(_,i)=>sub(basis(this.n,i),scale(u,u[i]))));v=candidates[0];if(this.view){const o=this.project(Z(this.n)),q=this.project(u),area=d=>{const p=this.project(d);return Math.abs((q.x-o.x)*(p.y-o.y)-(q.y-o.y)*(p.x-o.x));};v=candidates.reduce((best,d)=>area(d)>area(best)?d:best,v);}}v=unit(v);const theta=Math.acos(Math.max(-1,Math.min(1,dot(unit(a),unit(b)))));let prev=scale(u,.45);for(let i=1;i<=24;i++){const t=theta*i/24,p=add(scale(u,.45*Math.cos(t)),scale(v,.45*Math.sin(t)));this.line(prev,p,colors.ink,1.5);prev=p;}}
@@ -145,14 +147,15 @@ export class Scene {
     this.commands=[];this.labels=[];this.handles=[];this.axes();this.build(this);
     const commands=this.commands.map(cmd=>({...cmd,p:cmd.points.map(v=>this.project(v))}));
     const solids=new Map();for(const cmd of commands)if(cmd.solid){const depth=cmd.p.reduce((s,p)=>s+p.z,0)/cmd.p.length;if(!solids.has(cmd.solid)||solids.get(cmd.solid).depth>depth)solids.set(cmd.solid,{depth,color:this.orientationColor(cmd.p)});}
-    commands.sort((a,b)=>a.p.reduce((s,p)=>s+p.z,0)/a.p.length-b.p.reduce((s,p)=>s+p.z,0)/b.p.length);
+    commands.sort((a,b)=>!!a.background!==!!b.background?(a.background?-1:1):a.p.reduce((s,p)=>s+p.z,0)/a.p.length-b.p.reduce((s,p)=>s+p.z,0)/b.p.length);
     for(const cmd of commands){
       const ps=cmd.kind==='hull'?convexHull(cmd.p):cmd.p;if(!ps.length||ps.some(p=>!Number.isFinite(p.x)||!Number.isFinite(p.y)))continue;
       ctx.save();ctx.globalAlpha=cmd.alpha??1;ctx.setLineDash(cmd.dash?[4,5]:[]);ctx.lineWidth=cmd.width||1;
+      if(cmd.kind==='texture'){this.drawTexture(ctx,cmd);ctx.restore();continue;}
       ctx.beginPath();ctx.moveTo(ps[0].x,ps[0].y);for(const p of ps.slice(1))ctx.lineTo(p.x,p.y);
       if(cmd.kind==='poly'||cmd.kind==='hull'){
         ctx.closePath();let area=0;for(let i=0;i<ps.length;i++)area+=ps[i].x*ps[(i+1)%ps.length].y-ps[(i+1)%ps.length].x*ps[i].y;
-        const color=cmd.color||(cmd.solid?solids.get(cmd.solid).color:area<0?colors.warm:colors.cool);ctx.fillStyle=color;ctx.fill();ctx.globalAlpha=Math.min(1,(cmd.alpha??.16)*3.5+.4);ctx.strokeStyle=cmd.edgeColor||color;if(cmd.kind!=='hull')ctx.stroke();
+        const color=cmd.color||(cmd.solid?solids.get(cmd.solid).color:area<0?colors.warm:colors.cool);ctx.fillStyle=color;ctx.fill();ctx.globalAlpha=Math.min(1,(cmd.alpha??.16)*3.5+.4);ctx.strokeStyle=cmd.edgeColor||color;if(cmd.kind!=='hull'&&!cmd.fillOnly)ctx.stroke();
       }else if(cmd.kind==='point'||cmd.kind==='handle'){
         ctx.setLineDash([]);ctx.beginPath();ctx.arc(ps[0].x,ps[0].y,cmd.size||4,0,Math.PI*2);ctx.fillStyle=cmd.color;ctx.fill();
         if(cmd.kind==='handle'){ctx.strokeStyle='#fcfbf7';ctx.lineWidth=1.4;ctx.stroke();ctx.beginPath();ctx.arc(ps[0].x,ps[0].y,9,0,Math.PI*2);ctx.strokeStyle=rgba(cmd.color,.25);ctx.lineWidth=1;ctx.stroke();}
@@ -166,6 +169,13 @@ export class Scene {
       const anchor={x,y};let best={x,y,penalty:Infinity};for(const [dx,dy] of [[0,0],[0,-25],[0,25],[24,-50],[-24,50],[40,-75],[-40,75],[60,-100],[-60,100]]){const cx=Math.min(this.w-width-12,Math.max(8,anchor.x+dx)),cy=Math.min(this.h-25,Math.max(28,anchor.y+dy)),penalty=occupied.reduce((sum,b)=>sum+(cx<b.x+b.w&&cx+width>b.x&&Math.abs(cy-b.y)<22?1:0),0);if(penalty<best.penalty)best={x:cx,y:cy,penalty};if(!penalty)break;}x=best.x;y=best.y;if(Math.hypot(x-anchor.x,y-anchor.y)>30)this.lineLabelLeader(ctx,p,x,y,item.color);
       occupied.push({x,y,w:width});drawMath(ctx,item.text,x,y,size,item.color,!item.scalar);
     }
+  }
+  drawTexture(ctx,cmd){
+    const texture=cmd.texture;if(!texture.canvas){const canvas=document.createElement('canvas');canvas.width=texture.width;canvas.height=texture.height;canvas.getContext('2d').putImageData(new ImageData(texture.data,texture.width,texture.height),0,0);texture.canvas=canvas;}
+    const [a,b,,d]=cmd.points,at=(u,v)=>this.project(add(a,add(scale(sub(b,a),u),scale(sub(d,a),v)))),size=texture.width;
+    if(this.view.perspective===false){const p=at(0,0),q=at(1,0),r=at(0,1);ctx.transform((q.x-p.x)/size,(q.y-p.y)/size,(r.x-p.x)/size,(r.y-p.y)/size,p.x,p.y);ctx.drawImage(texture.canvas,0,0);return;}
+    const triangle=(uv)=>{const ps=uv.map(([u,v])=>at(u,v)),ts=uv.map(([u,v])=>[u*size,v*size]),[p,q,r]=ps,[[u,v],[u1,v1],[u2,v2]]=ts,det=(u1-u)*(v2-v)-(u2-u)*(v1-v);if(Math.abs(det)<EPS)return;const a=((q.x-p.x)*(v2-v)-(r.x-p.x)*(v1-v))/det,c=((r.x-p.x)*(u1-u)-(q.x-p.x)*(u2-u))/det,b=((q.y-p.y)*(v2-v)-(r.y-p.y)*(v1-v))/det,d=((r.y-p.y)*(u1-u)-(q.y-p.y)*(u2-u))/det;ctx.save();ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(q.x,q.y);ctx.lineTo(r.x,r.y);ctx.closePath();ctx.clip();ctx.transform(a,b,c,d,p.x-a*u-c*v,p.y-b*u-d*v);ctx.drawImage(texture.canvas,0,0);ctx.restore();};
+    const count=10;for(let i=0;i<count;i++)for(let j=0;j<count;j++){const u=i/count,v=j/count,s=1/count;triangle([[u,v],[u+s,v],[u+s,v+s]]);triangle([[u,v],[u+s,v+s],[u,v+s]]);}
   }
   lineLabelLeader(ctx,p,x,y,color){ctx.save();ctx.strokeStyle=color;ctx.globalAlpha=.35;ctx.lineWidth=.7;ctx.setLineDash([2,3]);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.lineTo(x,y-5);ctx.stroke();ctx.restore();}
   orientationColor(ps){let area=0;for(let i=0;i<ps.length;i++)area+=ps[i].x*ps[(i+1)%ps.length].y-ps[(i+1)%ps.length].x*ps[i].y;return area<0?colors.warm:colors.cool;}

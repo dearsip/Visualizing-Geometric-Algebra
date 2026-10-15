@@ -34,12 +34,14 @@ function renderControls(mount){
     else if(spec.type==='select'){input=el('select');for(const [value,text] of spec.options){const opt=el('option','',text);opt.value=value;input.append(opt);}input.value=model.state[spec.key];row.append(label,input);}
     else{input=el('input');input.type='range';input.min=spec.min;input.max=spec.max;input.step=spec.step;input.value=model.state[spec.key];const wrap=el('div','range-row'),out=el('output','',Number(input.value).toFixed(spec.key==='frame'?0:2));input.addEventListener('input',()=>out.textContent=Number(input.value).toFixed(spec.key==='frame'?0:2));wrap.append(input,out);row.append(label,wrap);}
     input.id=id;input.dataset.control=spec.key;
-    input.addEventListener(spec.type==='range'?'input':'change',()=>{let value=spec.type==='check'?input.checked:spec.type==='range'?+input.value:input.value;model.update(spec.key,value);if(['grade','count','pair','case','flat','flatA','flatB','preset','fix'].includes(spec.key))renderControls(mount);mount.scene.render();});side.append(row);
+    input.addEventListener(spec.type==='range'?'input':'change',()=>{let value=spec.type==='check'?input.checked:spec.type==='range'?+input.value:input.value;model.update(spec.key,value);if(['grade','count','pair','case','flat','flatA','flatB','preset','fix','lockWeight'].includes(spec.key))renderControls(mount);mount.scene.render();});side.append(row);
   }
   if(model.def.type==='basis'){}else activeInputs(model).forEach(i=>{const v=model.vectors[i];
     const block=el('div','coord-editor');block.append(el('div','coord-label',`${model.names[i]||String.fromCharCode(97+i)} · coordinates`));const grid=el('div','coord-inputs');grid.style.gridTemplateColumns=`repeat(${model.n},minmax(0,1fr))`;
     v.forEach((value,j)=>{const label=el('label','',['x','y','z','w','u'][j]),input=el('input');input.type='number';input.step='.05';input.value=Number(value.toFixed(2));input.dataset.vector=i;input.dataset.coordinate=j;input.setAttribute('aria-label',`${model.names[i]} ${['x','y','z','w','u'][j]}`);
       if(model.cga&&model.def.type!=='roundpoint'&&j>=model.n-2){input.readOnly=true;input.title='Null point · dependent coordinate';}
+      if(model.def.type==='null'&&j===model.n-3){input.readOnly=true;input.title='Null-cone section';}
+      if(model.state.lockWeight&&!model.cga&&j===model.n-1){input.readOnly=true;input.title='Unit slice · fixed weight';}
       if(model.state.fix&&['geometric','projective-product'].includes(model.def.type))input.disabled=true;
       const edit=()=>{const val=input.valueAsNumber;if(!Number.isFinite(val))return;const next=[...model.vectors[i]];next[j]=Math.max(-6,Math.min(6,val));model.move(i,next);mount.scene.render();if(input!==document.activeElement)input.value=Number(model.vectors[i][j].toFixed(2));};input.addEventListener('input',edit);input.addEventListener('change',edit);label.append(input);grid.append(label);});block.append(grid);side.append(block);
   });
@@ -63,10 +65,10 @@ function dimensionName(def,dim){
     dim+'D':dim===3?'2D Flat · 3D algebra':'3D Flat · 4D algebra';
 }
 function interactionGuide(model){
-  const extra=model.n>3;
-  return '<b>Left drag / 左ドラッグ · 1 finger / 一本指</b> Rotate / 回転'+(extra?' — free spatial rotation / 自由回転':' — e₃ upright / e₃を上に保つ')+
-    (extra?'<br><b>Right ↑↓ / 右ドラッグ上下 · 2 fingers / 二本指</b> Extra-axis latitude / 現在の上方向と追加軸の緯度（0–90°）':'<br><b>Right drag / 右ドラッグ</b> No orbit / 回転なし')+
-    (model.cga?'<br><b>Right ←→ / 右ドラッグ左右 · 2 fingers / 二本指</b> Exchange origin / infinity axes / 追加の二軸を切替（0–90°）':'')+
+  const cga=model.cga,extra=model.n>3,fold=extra&&(!cga||model.n===5);
+  return '<b>Left drag / 左ドラッグ · 1 finger / 1本指</b> Rotate / 回転'+(!cga&&extra?' — free spatial rotation / 自由回転':' — upright vertical axis / 縦軸を上に保つ')+
+    (fold?'<br><b>Right ↑↓ / 右ドラッグ上下 · 2 fingers / 2本指</b> Extra-axis latitude / 追加軸の緯度（0–180°）':'')+
+    (cga?'<br><b>Right ←→ / 右ドラッグ左右 · 2 fingers / 2本指</b> Exchange origin / infinity axes / 追加の2軸を切替（0–90°）':'')+
     '<br><b>Tip drag / 先端を左ドラッグ</b> Move / 移動　<b>Shift + left / Shift + 左ドラッグ</b> xy plane / xy平面'+
     '<br><b>Click / tap / クリック・タップ</b> Activate wheel / pinch / ズームを有効化　<b>Esc / tap outside / 図の外をタップ</b> Release / 解除';
 }
@@ -82,10 +84,10 @@ function mountFigure(def,i){
   const body=el('div','figure-body'),wrap=el('div','canvas-wrap'),canvas=el('canvas','scene-canvas');canvas.tabIndex=0;
   canvas.setAttribute('aria-label',def.title+': drag vector tips, use the coordinate inputs, or press Home to reset the view.');canvas.setAttribute('role','img');
   canvas.textContent='Interactive diagram. Coordinates and values are available alongside the canvas.';
-  const viewLabel=el('div','axes-view'),guide=el('details','canvas-guide'),guideTitle=el('summary','','Controls / 操作説明'),guideBody=el('div');guide.open=guideOpen;guide.append(guideTitle,guideBody);guide.addEventListener('toggle',()=>{if(guide.open===guideOpen)return;guideOpen=guide.open;localStorage.setItem('atlas-guide-open',String(guideOpen));document.querySelectorAll('.canvas-guide').forEach(g=>g.open=guideOpen);});wrap.append(canvas,viewLabel,guide);
-  const toolbar=el('div','canvas-tools'),viewButton=el('button','','View ↺'),reset=el('button','','Reset'),activation=el('button','','Activate zoom'),projection=el('select'),exportButton=el('button','','PNG');
+  const guide=el('details','canvas-guide'),guideTitle=el('summary','','Controls / 操作説明'),guideBody=el('div');guide.open=guideOpen;guide.append(guideTitle,guideBody);guide.addEventListener('toggle',()=>{if(guide.open===guideOpen)return;guideOpen=guide.open;localStorage.setItem('atlas-guide-open',String(guideOpen));document.querySelectorAll('.canvas-guide').forEach(g=>g.open=guideOpen);});wrap.append(canvas,guide);
+  const toolbar=el('div','canvas-tools'),viewButton=el('button','','View ↺'),reset=el('button','','Reset'),projection=el('select'),exportButton=el('button','','PNG');
   projection.setAttribute('aria-label',def.title+' camera projection');projection.innerHTML='<option value="perspective">Perspective</option><option value="orthographic">Orthographic</option>';
-  toolbar.append(projection,activation,viewButton,reset,exportButton);wrap.append(toolbar);
+  toolbar.append(projection,viewButton,reset,exportButton);wrap.append(toolbar);
   const side=el('div','figure-side');body.append(wrap,side);article.append(body);
   const caption=el('div','figure-caption');caption.innerHTML=`${def.ja}<br><span class="en">${def.en}</span><p class="reference">${def.ref}</p>`;
   article.append(caption);$('#figures').append(article);
@@ -96,18 +98,16 @@ function mountFigure(def,i){
     mount.dimension=dim;const saved=mount.saved.get(dim);mount.model=saved?.model||new FigureModel(def,dim);
     const model=mount.model;renderControls(mount);
     mount.scene=new Scene(canvas,model.n,scene=>{model.paint(scene);sync(mount);},(j,next)=>model.move(j,next));
-    mount.scene.isCGA=model.cga;mount.scene.section=def.type==='null';mount.scene.view=saved?.view||defaultView(model.n,model.cga,mount.scene.section);
-    mount.scene.onActivation=value=>{activation.textContent=value?'Release zoom':'Activate zoom';activation.setAttribute('aria-pressed',String(value));};mount.scene.activate(false);
+    mount.scene.isCGA=model.cga;mount.scene.section=def.type==='null';mount.scene.flatGeometry=model.alg.kind==='rigid';mount.scene.view=saved?.view||defaultView(model.n,model.cga,mount.scene.section,mount.scene.flatGeometry);
+    mount.scene.activate(false);
     projection.value=mount.scene.view.perspective?'perspective':'orthographic';
-    viewLabel.textContent=model.n+'D → 3D';guideBody.innerHTML=interactionGuide(model);
+    guideBody.innerHTML=interactionGuide(model);
     buttons.forEach(b=>{const active=+b.dataset.figureDim===dim;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
     mount.scene.render();
   }
   mount.selectDimension=selectDimension;mount.fixedDimension=fixedDimension;
   buttons.forEach(b=>b.addEventListener('click',()=>setDimension(+b.dataset.figureDim)));
   projection.addEventListener('change',()=>{mount.scene.view.perspective=projection.value==='perspective';mount.scene.render();});
-  let requestedActivation;activation.addEventListener('pointerdown',()=>{requestedActivation=activation.getAttribute('aria-pressed')!=='true';});
-  activation.addEventListener('click',()=>{const next=requestedActivation??activation.getAttribute('aria-pressed')!=='true';requestedActivation=undefined;if(next)canvas.focus({preventScroll:true});mount.scene.activate(next);});
   viewButton.addEventListener('click',()=>mount.scene.resetView());
   reset.addEventListener('click',()=>{mount.playing=false;cancelAnimationFrame(mount.animation);mount.model.reset();mount.scene.factorFrames.clear();renderControls(mount);mount.scene.render();});
   exportButton.addEventListener('click',()=>{

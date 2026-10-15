@@ -18,14 +18,14 @@ npm run dev
 
 ## Controls
 
-- 背景を左ドラッグ: 掴んだ側がマウスに追従するOrbit。3Dはe₃を上に保ち、仰角は±90°の直前まで。4D / CGAは仰角制限のない自由回転。e₄などの追加軸の表示方向は固定。
-- 右ドラッグ上下: 点の上を含め、現在の上方向と追加軸の緯度を0–90°で変えます。3Dでは右ドラッグは動作しません。
+- 背景を左ドラッグ: 掴んだ側がマウスに追従するOrbit。3Dはe₃を上に保ち、仰角は±90°の直前まで。4D Flatは自由回転。CGAは追加軸の組を縦軸として回転。
+- 右ドラッグ上下: 点の上を含め、現在の上方向と追加軸の緯度を0–180°で変えます。3Dでは右ドラッグは動作しません。
 - CGAで右ドラッグ左右: origin axisとPoint at infinityの軸を滑らかに交換。
 - vectorの先端をドラッグ: 表示の視線に垂直な面内で移動。
 - 先端をShift + 左ドラッグ: e₁e₂平面。
 - 数値欄: 隠れている次元を含む成分の編集。
 - Fix value: Wedge / DotではConstant-product locusへ制約。Geometric Productでは両入力を固定。
-- 図をクリック／タップするとWheel / Pinchを有効化。Esc、図の外、Release zoomで解除。非アクティブな図はページスクロールを妨げません。
+- 図をクリック／タップするとWheel / Pinchを有効化。Escか図の外で解除。非アクティブな図はページスクロールを妨げません。
 - タッチは1本指が左ドラッグ、2本指の中心の移動が右ドラッグ、指間距離がPinch。2本指から1本指になった時は、全て離すまで操作を中断します。
 - Complementの点線の先端: 直交factorの姿勢を調整。Scaleはfactorに均等配分します。
 - Perspective / Orthographic: 高次元から3Dへの線形射影の後に適用するカメラ投影。既定はOrthographic。Home / View ↺で初期視点。
@@ -55,3 +55,5 @@ npm run dev
 実装範囲・原著との違い・未実装項目は [CONTENT_NOTES.md](CONTENT_NOTES.md) を参照してください。計算と描画を分離しているので、将来VRChatで同じ演算例・数値検証を使える構成です。
 
 一次資料: [Author's website](https://projectivegeometricalgebra.org/), [RGA Wiki](https://rigidgeometricalgebra.org/), [CGA Wiki](https://conformalgeometricalgebra.org/)。
+
+Flat Geometryはunit sliceへの制約を既定で有効にし、視点の中心をprojective axisの0.5倍に置きます。CGAの通常表示とNull Coneの断面表示は別の軸配置を使います。

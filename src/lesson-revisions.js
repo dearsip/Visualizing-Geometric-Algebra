@@ -1,3 +1,5 @@
+import { displacementShading,displacementSurface } from './projective-field.js';
+import { roundPointConstruction } from './round-point.js';
 import { Algebra, EPS, basis, add, sub, scale, dot, length, unit } from './algebra.js';
 import { colors } from './scene.js';
 import { embed, affine, perpendicularFrame, cgaProperties, cgaRound, removeInfinity, spatialRound, closestPoint } from './geometry.js';
@@ -11,6 +13,7 @@ const fill=(m,spec)=>m.addControl(spec),number=x=>Number(x.toFixed(3));
 export const cgaTypes=['cga-dot','cga-join','cga-meet','cga-expansion','cga-property'];
 export function configure(m){
   const t=m.def.type,n=m.n;m.frames=new Map();
+  if(t==='null'){m.names=['q'];const x=m.vectors[0].slice(0,n-2);x[n-3]=0;m.vectors[0]=embed(x,n);}
   if(t==='trivector'){m.controls=m.controls.filter(x=>!['fix','loci'].includes(x.key));delete m.state.fix;delete m.state.loci;}
   if(t==='antiwedge'||t==='geometric-antiproduct'){m.setVectors(2);m.names=t==='antiwedge'?['ā','b̄']:['ḡ','h̄'];if(t==='geometric-antiproduct'){m.controls=[];fill(m,check('loci','Product loci',true));fill(m,check('complements','Complements',true));}}
   if(t==='complement')m.controls=m.controls.filter(x=>x.key!=='frame');
@@ -18,35 +21,37 @@ export function configure(m){
   if(t==='euclidean-dot'){m.alg=new Algebra(n);m.setVectors(2);fill(m,check('fix','Fix value'));fill(m,check('loci','Dot loci',true));}
   if(t==='projective-product'){m.setVectors(2,'point');m.names=['a','b'];fill(m,check('fix','Fix value'));fill(m,check('wedgeLocus','Wedge loci',true));fill(m,check('dotLocus','Dot loci',true));}
   if(t==='geometric')fill(m,check('fix','Fix value'));
-  if(t==='dot'||t==='antidot'){m.controls.find(x=>x.key==='loci').label=t==='dot'?'Dot loci':'Weight loci';m.controls.find(x=>x.key==='decompose').label=t==='dot'?'Bulk':'Weight';if(t==='antidot'){m.setVectors(2,'point');m.names=['p','q'];}}
-  if(t==='distance'){m.names=['p','q','r','s'];m.controls.find(x=>x.key==='case').options.push([3,'Line – Line']);}
+  if(t==='dot'||t==='antidot'){m.controls.find(x=>x.key==='loci').label=t==='dot'?'Dot loci':'Weight loci';m.controls.find(x=>x.key==='decompose').label=t==='dot'?'Bulk':'Weight';m.setVectors(2,'point');m.names=t==='dot'?['a','b']:['p','q'];}
+  if(t==='distance'){m.names=['p','q','r','s'];if(n===4)m.controls.find(x=>x.key==='case').options.push([3,'Line – Line']);}
   if(t==='meet')fill(m,{type:'button',key:'parallel',label:'Make parallel'});
   if(t==='flat'&&m.def.grade===2)fill(m,{type:'button',key:'unitLineWeight',label:'Weight norm = 1'});
-  if(t==='reflection'||t==='rotation'){fill(m,check('products','Product blades',t==='reflection'));if(t==='reflection')fill(m,select('grade','Object grade',Array.from({length:n},(_,i)=>[i+1,['Vector','Bivector','Trivector','Antiscalar'][i]])));}
+  if(t==='reflection'||t==='rotation'){fill(m,check('products','Product blades',t==='reflection'));if(t==='rotation')m.state.complements=false;if(t==='reflection')fill(m,select('grade','Object grade',Array.from({length:n},(_,i)=>[i+1,['Vector','Bivector','Trivector','Antiscalar'][i]])));}
   if(t==='attitude'){m.controls.find(x=>x.key==='grade').options=[[1,'Point'],[2,'Line'],...(n===4?[[3,'Plane']]:[])];}
   if(t==='projection'){m.controls=[];fill(m,select('pair','Objects',projectionPairs(n,m.def.variant)));fill(m,check('dual','Dual',true));fill(m,check('intermediate','First product',true));fill(m,check('attached','Attach intermediate blade',true));fill(m,check('homogeneous','Homogeneous blades'));setPair(m);}
   if(t==='interior')fill(m,check('homogeneous','Homogeneous blades'));
-  if(t==='angle'){m.setVectors(4,'point');fill(m,select('pair','Objects',n===3?[['2:2','Line / Line']]:[['2:2','Line / Line'],['3:3','Plane / Plane'],['3:2','Plane / Line']]));setPair(m);}
+  if(t==='angle'){m.setVectors(4,'point');fill(m,select('pair','Objects',n===3?[['2:2','Line / Line']]:[['2:2','Line / Line'],['3:3','Plane / Plane'],['3:2','Plane / Line']]));fill(m,check('bulkDual','Bulk dual'));fill(m,check('weightDual','Weight dual'));fill(m,check('angleProducts','Antiwedge products'));setPair(m);}
   if(t==='parametric'){m.setVectors(2,'point');m.names=['q','r'];fill(m,select('grade','Object',[[2,'Line'],...(n===4?[[3,'Plane']]:[])]));fill(m,range('parameter','λ',-2,2,.025,0));if(n===4)fill(m,range('parameter2','μ',-2,2,.025,0));}
-  if(t==='projective'||t==='isometry'){m.controls=m.controls.filter(x=>!['loci','complements'].includes(x.key));m.vectors[0]=[1.1,-.2,...(n===4?[.4]:[]),1];fill(m,select('grade','Object grade',Array.from({length:n-1},(_,i)=>[i+1,['Point','Line','Plane'][i]])));m.controls.find(x=>x.key==='orbit').label=t==='projective'?'Invariant surface':'Equal-distance surfaces';}
+  if(t==='projective'||t==='isometry'){m.controls=m.controls.filter(x=>!['loci','complements'].includes(x.key));m.vectors[0]=[1.1,-.2,...(n===4?[.4]:[]),1];fill(m,select('grade','Object grade',Array.from({length:n-1},(_,i)=>[i+1,['Point','Line','Plane'][i]])));m.controls.find(x=>x.key==='orbit').label=t==='projective'?'Equal-displacement surface':'Equal-distance surfaces';if(t==='projective')fill(m,check('shading','Invariant shading',true));}
   if(t==='motor'){m.controls.find(c=>c.key==='count').options.unshift([1,'1 · Flector']);fill(m,select('preset','Preset',[['custom','Custom reflections'],['translation','Translation'],['rotation','Rotation'],['inversion','Point inversion'],['reflection','Reflection']]));}
   if(m.cga){if(m.state.mesh!==undefined)m.state.mesh=true;if(m.state.radius!==undefined)m.state.radius=false;}
-  if(t==='roundpoint')m.names=['a'];
-  if(t==='round'||t==='roundpoint'){m.controls=m.controls.filter(c=>!['carrier','cocarrier','container','dual','partner','attitude','conjugate'].includes(c.key));for(const key of ['carrier','cocarrier','container','dual','partner','attitude','conjugate'])m.state[key]=false;}
-  if(t==='cga-property'){m.controls=[];m.setVectors(2,'null');fill(m,select('grade','Object',Array.from({length:n-1},(_,i)=>[i+1,roundName(i+1,n)]),2));fill(m,check('mesh','Null cone / Horosphere',true));fill(m,check('homogeneous','Homogeneous blade'));m.state[m.def.property]=true;}
+  if(t==='roundpoint'){m.names=['a'];for(const spec of [check('carrierLine','Line through a and infinity',true),check('tangent','Tangent plane'),check('parallelPlane','Parallel plane through a',true),check('section','Horosphere section',true),check('spatial','u = 0 projection',true)])fill(m,spec);m.state.radius=true;}
+  if(t==='round'||t==='roundpoint'){m.controls=m.controls.filter(c=>!['carrier','cocarrier','container','dual','partner','attitude','conjugate',...(t==='roundpoint'?['homogeneous']:[])].includes(c.key));for(const key of ['carrier','cocarrier','container','dual','partner','attitude','conjugate'])m.state[key]=false;}
+  if(t==='cga-property'){m.controls=[];m.setVectors(2,'null');if(['carrier','cocarrier'].includes(m.def.property)){fill(m,check('embeddedProperty','Horosphere representation',true));fill(m,check('propertyBlade','Homogeneous property blade'));}fill(m,select('grade','Object',Array.from({length:n-1},(_,i)=>[i+1,roundName(i+1,n)]),2));fill(m,check('mesh','Null cone / Horosphere',true));fill(m,check('homogeneous','Homogeneous blade'));m.state[m.def.property]=true;}
   if(t==='containment'){m.controls=[];m.names[0]='p₀';fill(m,select('grade','Object',Array.from({length:n-2},(_,i)=>[i+2,roundName(i+2,n)]),n-1));fill(m,check('flat','Make object flat'));fill(m,{type:'button',key:'contained',label:'Put p₀ on the object'});fill(m,check('dual','Antidual'));}
   if(t==='round'&&m.def.grade===4)m.names=['p','q','r','t'];
   if(cgaTypes.includes(t)&&t!=='cga-property'){m.controls=[];fill(m,check('mesh','Null cone / Horosphere',true));if(t==='cga-dot'){m.setVectors(2,'null');m.names=['a','b'];fill(m,range('radiusA','Radius² · a',-2,2,.025,0));fill(m,range('radiusB','Radius² · b',-2,2,.025,0));}
     else{fill(m,select('pair','Objects',cgaPairs(n,t)));fill(m,check('flatA','Make first object flat'));fill(m,check('flatB','Make second object flat'));fill(m,check('spatial','u = 0 geometry',true));fill(m,check('dual','Antidual',t==='cga-expansion'));fill(m,check('homogeneous','Homogeneous blades'));setPair(m);}}
-  if(m.alg.kind==='rigid')fill(m,check('lockWeight',`Keep on unit slice (${n===3?'z':'w'} = 1)`));
+  if(m.alg.kind==='rigid'){fill(m,check('lockWeight',`Keep on unit slice (${n===3?'z':'w'} = 1)`,true));for(let i=0;i<m.vectors.length;i++)if(Math.abs(m.vectors[i][n-1])>EPS)m.vectors[i]=scale(m.vectors[i],1/m.vectors[i][n-1]);}
 }
 function projectionPairs(n,variant){const anti=variant>=2;return (n===3?(anti?[[2,1]]:[[1,2]]):anti?[[3,1],[2,1],[3,2]]:[[1,3],[1,2],[2,3]]).map(([a,b])=>[`${a}:${b}`,`${name(a)} → ${name(b)}`]);}
 function cgaPairs(n,t){let pairs=t==='cga-join'?[[1,1],[1,2],...(n===5?[[1,3],[2,2]]:[])]:t==='cga-meet'?(n===4?[[3,3],[3,2]]:[[4,4],[4,3],[3,3],[4,2]]):(n===4?[[1,2],[1,3],[2,3]]:[[1,2],[1,3],[1,4],[2,3],[2,4],[3,4]]);return pairs.map(([a,b])=>[`${a}:${b}`,`${roundName(a,n)} / ${roundName(b,n)}`]);}
 const roundName=(k,n)=>k===1?'Round point':k===2?'Dipole':k===3?'Circle':'Sphere';
 function roundSeed(m,k,side){const x=Array(m.n-2).fill(0);x[0]=side? .7:-.7;if(k===1)x[1]=.45;if(side&&m.n===5)x[2]=.35;const r=side?1.1:1;if(k===1)return [embed(x,m.n)];if(k===2)return [-1,1].map(s=>embed(add(x,basis(m.n-2,side?1:0,s*r)),m.n));if(k===3)return [0,2*Math.PI/3,4*Math.PI/3].map(t=>{const p=[...x];p[0]+=r*Math.cos(t);p[side&&m.n===5?2:1]+=r*Math.sin(t);return embed(p,m.n);});return m.roundSeeds(x,r);}
-function setPair(m){m.grades=String(m.state.pair).split(':').map(Number);const [a,b]=m.grades;if(m.cga){m.vectors=[...roundSeed(m,a,0),...roundSeed(m,b,1)];const labels=['p','q','r','t'];m.names=[...labels.slice(0,a),...labels.slice(0,b).map(x=>x+'₂')];}else{m.setVectors(a+b,'point');m.names=m.vectors.map((_,i)=>['q','r','s','t','v','w','k','j'][i]||`q${i+1}`);if(m.def.type==='projection'){if(a===1)m.names[0]='p';if(b===1)m.names[a]='p';}}m.frames?.clear();}
+function setPair(m){m.grades=String(m.state.pair).split(':').map(Number);const [a,b]=m.grades;if(m.cga){m.vectors=[...roundSeed(m,a,0),...roundSeed(m,b,1)];const labels=['p','q','r','t'];m.names=[...labels.slice(0,a),...labels.slice(0,b).map(x=>x+'₂')];}else{m.setVectors(a+b,'point');m.names=m.vectors.map((_,i)=>['p','q','r','s','t','v','w','k'][i]);if(m.def.type==='projection'){let next=0;const letters=a===1||b===1?['q','r','s','t','v']:['p','q','r','s','t'];m.names=m.grades.flatMap(k=>k===1?['p']:Array.from({length:k},()=>letters[next++]));}}m.frames?.clear();}
 export function update(m,key,value){
   const t=m.def.type,n=m.n,h=n-1;
+  if(key==='infinity')m.state.lockWeight=false;
+  if(key==='flat'&&t==='round'&&m.def.grade===2)m.names[0]=value?'p₀':'p';
   if(key==='operation'&&t==='interior'){m.state.operation=value;m.names=+value>=2?['q','r','s']:['p','q','r'];return true;}
   if(key==='grade'&&['cga-property','containment'].includes(t)){m.state.grade=+value;m.vectors=[...(t==='containment'?[embed([-.4,.6,...(n===5?[.3]:[])],n)]:[]),...roundSeed(m,+value,0)];m.names=m.vectors.map((_,i)=>['p','q','r','t','v'][i]);if(t==='containment')m.names[0]='p₀';return true;}
   if(key==='unitLineWeight'){const p=affine(m.vectors[0]),q=affine(m.vectors[1]);if(p&&q&&length(sub(q,p))>EPS){const c=scale(add(p,q),.5),d=scale(unit(sub(q,p)),.5);m.vectors=[sub(c,d),add(c,d)];}return true;}
@@ -64,7 +69,7 @@ export function activeInputs(m){const t=m.def.type;if(t==='distance')return Arra
 export function dragSpace(m,i){
   const n=m.n,t=m.def.type,h=n-1;
   if(m.state.fix&&['geometric','projective-product'].includes(t))return [];
-  if(m.cga&&t!=='roundpoint')return Array.from({length:n},(_,j)=>basis(n,j));
+  if(m.cga&&t!=='roundpoint')return Array.from({length:n},(_,j)=>j).filter(j=>t!=='null'||j!==n-3).map(j=>basis(n,j));
   let frame=Array.from({length:n},(_,j)=>basis(n,j));
   if(m.state.fix){if(t==='wedge')frame=[unit(m.vectors[1-i])];
     if(['dot','euclidean-dot','projective-product'].includes(t)){const normal=[...m.vectors[1-i]];if(t!=='euclidean-dot')normal[h]=0;frame=perpendicularFrame(normal);}
@@ -75,14 +80,14 @@ function restrict(frame,index){const row=frame.map(v=>v[index]);if(length(row)<E
 export function move(m,i,next){
   const t=m.def.type,n=m.n,old=m.vectors[i];if(!old)return true;
   if(m.state.fix||m.state.lockWeight){const space=dragSpace(m,i),delta=sub(next,old);next=add(old,space.reduce((s,v)=>add(s,scale(v,dot(v,delta)/(dot(v,v)||1))),zero(n)));}
-  if(m.cga&&t!=='roundpoint')next=embed(next.slice(0,n-2),n,t==='cga-dot'?m.state[i===0?'radiusA':'radiusB']:0);
+  if(m.cga&&t!=='roundpoint'){const x=next.slice(0,n-2);if(t==='null')x[n-3]=0;next=embed(x,n,t==='cga-dot'?m.state[i===0?'radiusA':'radiusB']:0);}
   if(m.state.unitWeight&&Math.abs(next[n-1])>EPS)next=scale(next,1/next[n-1]);m.vectors[i]=next;
   if(t==='roundpoint'){const w=next[n-2];if(Math.abs(w)>EPS)m.state.radius2=-m.alg.inner(m.alg.vector(next),m.alg.vector(next))/(w*w);}
   return true;
 }
 function inputs(m,scene,indices=activeInputs(m),labels=null){for(const i of indices){scene.handle(m.vectors[i],labels?.[i]??m.names[i],i,m.grades?(i<m.grades[0]?colors.a:colors.b):[colors.a,colors.b,colors.c][i%3],null,false,dragSpace(m,i));if(m.cga&&m.def.type!=='roundpoint')scene.handles.at(-1).retract=surfaceRetraction(m,i);}}
-export function surfaceRetraction(m,i){return v=>{const n=m.n,w=v[n-2],old=m.vectors[i],radius=m.def.type==='cga-dot'?m.state[i===0?'radiusA':'radiusB']:0;if(Math.abs(w)<1e-5)return old;return embed(v.slice(0,n-2).map(x=>x/w),n,radius);};}
-function flat(scene,m,a,label,color,homogeneous=false){scene.flat(a,m.alg,m.state.lockWeight?label:hat(label),color);if(homogeneous&&m.alg.gradeOf(a)>1){const fs=sourceFactors(m,a);if(fs)scene.blade(fs,label,{color,alpha:.1});else scene.element(a,m.alg,label,{color,alpha:.1});}}
+export function surfaceRetraction(m,i){return v=>{const n=m.n,w=v[n-2],old=m.vectors[i],radius=m.def.type==='cga-dot'?m.state[i===0?'radiusA':'radiusB']:0;if(Math.abs(w)<1e-5)return old;const x=v.slice(0,n-2).map(x=>x/w);if(m.def.type==='null')x[n-3]=0;return embed(x,n,radius);};}
+function flat(scene,m,a,label,color,homogeneous=false){const unit=Math.abs(m.alg.weightNorm(a)-1)<1e-7,k=m.alg.gradeOf(a),coords=k===1?m.alg.coordinates(a):null,duplicate=unit&&coords&&scene.labels.some(x=>x.text===label&&length(sub(x.p,coords))<1e-7);scene.flat(a,m.alg,duplicate?'':unit?label:hat(label),color);if(homogeneous&&k>1){const fs=sourceFactors(m,a);if(fs)scene.blade(fs,label,{color,alpha:.1});else scene.element(a,m.alg,label,{color,alpha:.1});}}
 function sourceFactors(m,a){const k=m.alg.gradeOf(a);if(k<2)return null;for(let i=0;i<=m.vectors.length-k;i++){const fs=m.vectors.slice(i,i+k),b=m.alg.blade(fs);if(length(sub(a,b))<1e-7)return fs;}return null;}
 function pair(m){const [a,b]=m.grades;return {a:m.alg.blade(m.vectors.slice(0,a)),b:m.alg.blade(m.vectors.slice(a,a+b)),aName:name(a),bName:a===b?({1:'q',2:'k',3:'h',4:'t'}[b]):name(b)};}
 function balanced(m,a,key){const f=continuousFactors(a,m.alg,m.frames.get(key));m.frames.set(key,f);return f;}
@@ -121,13 +126,13 @@ export function paint(m,scene){
     inputs(m,scene);const i=t==='reflection'?1:2,v0=vec(i),neg=A.reflect(v0,vec(0));if(!neg){m.status='a⁻¹ undefined';return true;}const v1=scale(neg,-1),p1=A.coordinates(v1);scene.arrow(p1,'v₁',colors.result);scene.line(vs[i],p1,colors.mesh,1,true);
     if(s.products){scene.blade([vs[0],vs[i]],'a ⟑ v₀',{color:colors.a,alpha:.1});scene.blade([p1,vs[0]],'v₁ ⟑ a = a ⟑ v₀',{color:colors.result,alpha:.1});scene.angle(vs[0],vs[i]);}
     if(t==='reflection'){scene.arrow(scale(p1,-1),'−v₁',colors.purple);scene.line(vs[i],scale(p1,-1),colors.mesh,1,true);}
-    else{const q=A.reflect(v1,vec(1));if(!q){m.status='b⁻¹ undefined';return true;}const v2=scale(q,-1);scene.arrow(A.coordinates(v2),'v₂',colors.purple);scene.line(p1,A.coordinates(v2),colors.mesh,1,true);if(s.products){scene.blade([vs[1],p1],'b ⟑ v₁',{color:colors.b,alpha:.08});scene.blade([A.coordinates(v2),vs[1]],'v₂ ⟑ b = b ⟑ v₁',{color:colors.purple,alpha:.08});scene.angle(vs[1],p1);}scene.element(A.rc(A.blade(vs.slice(0,2))),A,'',{color:colors.purple,dashed:true,alpha:.04});rotationArc(scene,vs[0],vs[1],vs[i]);m.row('v₂',m.mv(v2));}
+    else{scene.arrow(scale(p1,-1),'−v₁',colors.mesh);scene.line(vs[i],scale(p1,-1),colors.mesh,1,true);const q=A.reflect(v1,vec(1));if(!q){m.status='b⁻¹ undefined';return true;}const v2=scale(q,-1);scene.arrow(A.coordinates(v2),'v₂',colors.purple);scene.line(p1,A.coordinates(v2),colors.mesh,1,true);if(s.products){scene.blade([vs[1],p1],'b ⟑ v₁',{color:colors.b,alpha:.08});scene.blade([A.coordinates(v2),vs[1]],'v₂ ⟑ b = b ⟑ v₁',{color:colors.purple,alpha:.08});scene.angle(vs[1],p1);}scene.element(A.rc(A.blade(vs.slice(0,2))),A,'',{color:colors.purple,dashed:true,alpha:.04});rotationArc(scene,vs[0],vs[1],vs[i]);m.row('v₂',m.mv(v2));}
     if(+s.grade>1){const source=vs.slice(i),first=source.map(v=>A.coordinates(scale(A.reflect(A.vector(v),vec(0)),-1))),last=t==='rotation'?first.map(v=>A.coordinates(scale(A.reflect(A.vector(v),vec(1)),-1))):first;scene.blade(source,source.map((_,j)=>['v₀','w₀','u₀','t₀'][j]).join(' ∧ '),{alpha:.1,color:colors.a});scene.blade(last,source.map((_,j)=>['v','w','u','t'][j]+(t==='rotation'?'₂':'₁')).join(' ∧ '),{alpha:.14,color:colors.result});m.formula=t==='reflection'?`${V('B₁')} = ${V('a')} ${GP} ${V('B₀')} ${GP} ${V('a')}<sup>−1</sup>`:`${V('B₂')} = ${V('b')} ${GP} ${V('a')} ${GP} ${V('B₀')} ${GP} ${V('a')}<sup>−1</sup> ${GP} ${V('b')}<sup>−1</sup>`;m.row('B₀',m.mv(A.blade(source)));m.row(t==='rotation'?'B₂':'B₁',m.mv(A.blade(last)));}
     if(s.complements){scene.element(A.rc(vec(0)),A,rc('a'),{color:colors.a,dashed:true,alpha:.05});if(t==='rotation')scene.element(A.rc(vec(1)),A,rc('b'),{color:colors.b,dashed:true,alpha:.05});}m.row('v₁',m.mv(v1));return true;
   }
   return paintFlat(m,scene)||paintConformal(m,scene);
 }
-function rotationArc(scene,a,b,v){const x=unit(a),y=unit(sub(b,scale(x,dot(b,x))));if(length(y)<EPS)return;const theta=2*Math.atan2(dot(b,y),dot(b,x)),vx=dot(v,x),vy=dot(v,y),center=sub(v,add(scale(x,vx),scale(y,vy)));let previous=v;for(let j=1;j<=48;j++){const t=theta*j/48,p=add(center,add(scale(x,vx*Math.cos(t)-vy*Math.sin(t)),scale(y,vx*Math.sin(t)+vy*Math.cos(t))));scene.line(previous,p,colors.purple,1.8,true);previous=p;}scene.commands.at(-1).kind='arrow';}
+function rotationArc(scene,a,b,v){const x=unit(a),y=unit(sub(b,scale(x,dot(b,x))));if(length(y)<EPS)return;const theta=2*Math.atan2(dot(b,y),dot(b,x)),vx=dot(v,x),vy=dot(v,y),center=sub(v,add(scale(x,vx),scale(y,vy)));let previous=v;for(let j=1;j<=48;j++){const t=theta*j/48,p=add(center,add(scale(x,vx*Math.cos(t)-vy*Math.sin(t)),scale(y,vx*Math.sin(t)+vy*Math.cos(t))));scene.line(previous,p,colors.purple,1,true);previous=p;}scene.commands.at(-1).kind='arrow';}
 function rotateFrame(frame,index,next){if(!frame?.length)return frame;const u=unit(frame[index]),projected=frame.reduce((s,f)=>add(s,scale(unit(f),dot(unit(f),next))),zero(next.length)),target=unit(projected);if(length(projected)<EPS)return frame;const cosine=Math.max(-1,Math.min(1,dot(u,target)));let v=sub(target,scale(u,cosine));if(length(v)<EPS){if(cosine>0)return frame;v=unit(frame[(index+1)%frame.length]);}else v=unit(v);const sine=Math.sqrt(Math.max(0,1-cosine*cosine));return frame.map(f=>{const x=dot(f,u),y=dot(f,v);return add(f,add(scale(u,(cosine-1)*x-sine*y),scale(v,sine*x+(cosine-1)*y)));});}
 function paintFlat(m,scene){
   const t=m.def.type,A=m.alg,n=m.n,h=n-1,s=m.state,vs=m.vectors,vec=i=>A.vector(vs[i]);
@@ -181,7 +186,9 @@ function paintFlat(m,scene){
     inputs(m,scene);const {a:x,b:y,aName:xn,bName:yn}=pair(m),ax=A.attitude(x),ay=A.attitude(y),num=A.antiwedge(ax,A.dual(ay)),den=A.bulkNorm(ax)*A.bulkNorm(ay),same=m.grades[0]===m.grades[1],cosine=den>EPS?Math.max(-1,Math.min(1,(same?num[0]:A.bulkNorm(num))/den)):null;flat(scene,m,x,xn,colors.a);flat(scene,m,y,yn,colors.b);scene.element(ax,A,`att(${xn})`,{color:colors.a,dashed:true});scene.element(ay,A,`att(${yn})`,{color:colors.b,dashed:true});
     const eu=new Algebra(h),normal=att=>{const spatial=att.slice(0,1<<h);return [...eu.coordinates(eu.complement(spatial)),0];},first=A.gradeOf(ax)===1?A.coordinates(ax):normal(ax),second=A.gradeOf(ay)===1?A.coordinates(ay):normal(ay);
     if(same)scene.angle(first,second);else{const plane=m.grades[0]===3?unit(first):unit(second),line=m.grades[0]===2?first:second,projected=sub(line,scale(plane,dot(plane,line)));if(length(projected)>EPS)scene.angle(line,projected);}
-    const expr=`att(${V(xn)}) ∨ att(${V(yn)})<sup>★</sup>`;m.formula=`cos φ = ${same?`(${expr})`:`‖${expr}‖<sub>●</sub>`} / (‖att(${V(xn)})‖<sub>●</sub>‖att(${V(yn)})‖<sub>●</sub>)<br>cos φ(${V(xn)}, ${V(yn)}) = ‖${V(xn)} ∨ ${V(yn)}<sup>☆</sup>‖<sub>●</sub> + ‖${V(xn)}‖<sub>○</sub> ‖${V(yn)}‖<sub>○</sub>　(2.145)`;m.row('Angle',cosine===null?'Undefined':`${number(Math.acos(cosine)*180/Math.PI)}°`);return true;
+    const bulkDual=A.dual(ay),weightDual=A.dual(y,true),weighted=A.antiwedge(x,weightDual);for(const [enabled,value,label,color] of [[s.bulkDual,bulkDual,`att(${yn})^{★}`,colors.purple],[s.weightDual,weightDual,`${yn}^{☆}`,colors.c]])if(enabled){scene.element(value,A,label,{color,dashed:true});scene.flat(value,A,hat(label),color);}
+    if(s.angleProducts){scene.element(num,A,`att(${xn}) ∨ att(${yn})^{★}`,{color:colors.purple,dashed:true});scene.element(weighted,A,`${xn} ∨ ${yn}^{☆}`,{color:colors.c,dashed:true});m.row(`att(${xn}) ∨ att(${yn})^{★}`,m.mv(num));m.row(`${xn} ∨ ${yn}^{☆}`,m.mv(weighted));}
+    const expr=`att(${V(xn)}) ∨ att(${V(yn)})<sup>★</sup>`,weightedExpr=`${V(xn)} ∨ ${V(yn)}<sup>☆</sup>`;m.formula=`cos φ(${V(xn)}, ${V(yn)}) = ${same?`(${expr})`:`‖${expr}‖<sub>●</sub>`} / (‖att(${V(xn)})‖<sub>●</sub>‖att(${V(yn)})‖<sub>●</sub>) = <span class="hat">${same?`(${weightedExpr})`:`‖${weightedExpr}‖<sub>●</sub>`} + ‖${V(xn)}‖<sub>○</sub> ‖${V(yn)}‖<sub>○</sub></span>`;m.row('Angle',cosine===null?'Undefined':`${number(Math.acos(cosine)*180/Math.PI)}°`);return true;
   }
   if(t==='parametric'){
     inputs(m,scene);const k=+s.grade,u=A.blade(vs.slice(0,k)),xn=name(k),att=A.attitude(u),support=closestPoint(basis(n,h),u,A);flat(scene,m,u,xn,colors.a,true);scene.element(att,A,`att(${xn})`,{color:colors.b,dashed:true});if(support){const fs=A.factor(att).map(unit),alpha=k===2?A.scalar(s.parameter):A.vector(add(scale(fs[0]||zero(n),s.parameter),scale(fs[1]||zero(n),s.parameter2||0))),delta=A.antiwedge(att,A.dual(alpha)),p=add(support,A.coordinates(delta));scene.point(support,hat(`sup(${xn})`),colors.mesh);scene.point(p,hat('p(α)'),colors.result,6);scene.line(support,p,colors.result,1.7,true);m.row('α',m.mv(alpha));m.row('p(α)',m.mv(A.vector(p)));}m.formula=`${V('p')}(α) = <span class="hat">sup(${V(xn)})</span> + att(${V(xn)}) ∨ ${k===2?'α':V('α')}<sup>★</sup>　(gr α = ${k-2})`;return true;
@@ -198,6 +205,7 @@ function paintSandwich(m,scene){
   source.forEach((v,i)=>scene.line(v,outputs[i],colors.mesh,1.4,true));flat(scene,m,v0,inLabel,colors.a);flat(scene,m,out,outLabel,colors.result);if(p0&&p1)scene.line(p0,p1,colors.result,1.5,true);
   const q=A.inner(av,av);
   if(!anti){
+    if(s.shading)displacementShading(scene,vs[0],vs[1]);
     if(k===1){scene.blade([vs[0],vs[1]],'a ⟑ v₀',{color:colors.a,alpha:.1});scene.blade([outputs[0],vs[0]],'v₁ ⟑ a = a ⟑ v₀',{color:colors.result,alpha:.1});}
     const normal=A.coordinates(A.metricMap(av)),eu=new Algebra(n),fixed=eu.lc(eu.vector(normal));scene.flat(fixed,A,'fixed hyperplane',colors.green);const fixedPoint=affine(vs[0]);if(fixedPoint)scene.point(fixedPoint,hat('a'),colors.green);
     if(q>EPS){const infNormal=basis(n,h);for(let i=0;i<h;i++)infNormal[i]=-2*vs[0][h]*vs[0][i]/q;scene.flat(eu.lc(eu.vector(infNormal)),A,'sent to infinity',colors.purple);}
@@ -214,26 +222,21 @@ function paintSandwich(m,scene){
   }
   m.row(outLabel,m.mv(out));return true;
 }
-export function projectiveSurface(scene,a,v){
-  const n=a.length,h=n-1,spatial=a.slice(0,h),norm=length(spatial);if(norm<EPS)return;const u=unit(spatial),frame=perpendicularFrame(u),s=dot(u,v.slice(0,h)),l=v[h]-a[h]*s/norm;
-  if(Math.abs(l)<1e-6){if(Math.abs(a[h])>EPS)scene.locusSpan([...scale(u,norm/a[h]),1],frame.map(f=>[...f,0]),colors.green);return;}
-  const k=dot(v.slice(0,h),v.slice(0,h))/(l*l),outputWeight=2*a[h]*dot(spatial,v.slice(0,h))/(norm*norm)-v[h],outSpatial=sub(scale(spatial,2*dot(spatial,v.slice(0,h))/(norm*norm)),v.slice(0,h)),samples=[Math.abs(v[h])>EPS?scale(v.slice(0,h),1/v[h]):null,Math.abs(outputWeight)>EPS?scale(outSpatial,1/outputWeight):null].filter(Boolean),levels=samples.map(p=>dot(u,p));
-  const w=1,angles=h===2?[0,Math.PI]:[0,Math.PI/2,...samples.map(p=>Math.atan2(dot(frame[1],p),dot(frame[0],p)))],meridians=[...Array.from({length:118},(_,i)=>-3.5+i*.06),...levels].sort((a,b)=>a-b);
-  for(const theta of angles){let previous=null;for(const t of meridians){const r2=k*(w-a[h]*t/norm)**2-t*t;if(r2<0||r2>20){previous=null;continue;}const r=Math.sqrt(r2),d=h===2?scale(frame[0],Math.cos(theta)):add(scale(frame[0],Math.cos(theta)),scale(frame[1],Math.sin(theta))),p=[...add(scale(u,t),scale(d,r)),w];if(previous)scene.line(previous,p,colors.green,1.1,true,.65);previous=p;}}
-  if(h===3)for(const t of [...Array.from({length:11},(_,i)=>-3+i*.6),...levels]){const r2=k*(w-a[h]*t/norm)**2-t*t;if(r2>0&&r2<16)scene.circle([...scale(u,t),w],[...frame[0],0],[...frame[1],0],Math.sqrt(r2),colors.green,true,.5);}
-}
+export const projectiveSurface=displacementSurface;
+
 function paintConformal(m,scene){
   const t=m.def.type,A=m.alg,n=m.n,s=m.state,vs=m.vectors;if(!m.cga)return false;
   if(t==='roundpoint'||t==='round'||t==='cga-property'){
     inputs(m,scene);let u=t==='roundpoint'?A.vector(vs[0]):A.blade(s.flat?[...vs.slice(0,-1),basis(n,n-1)]:vs),label=t==='roundpoint'?'a':objectSymbol(A.gradeOf(u),s.flat),info=cgaRound(u,A),prop=cgaProperties(u,A);
     if(t==='roundpoint'){m.formula=`${V('a')} / a<sub>${n===4?'z':'w'}</sub> = ${V('x')} + ${E(n-1)} + ½(|${V('x')}|² + r²)${E(n)}`;if(Math.abs(vs[0][n-2])<EPS)m.status=length(vs[0].slice(0,n-2))<EPS&&Math.abs(vs[0][n-1])>EPS?'Point at infinity':'Zero round weight · no finite centre';}
-    if(t==='round')m.formula=`${V(label)} = ${m.names.slice(0,s.flat?-1:undefined).map(V).join(' ∧ ')}${s.flat?` ∧ ${E(n)}`:''}`;
+    if(t==='round'&&s.flat)scene.arrow(basis(n,n-1),m.names.at(-1)+' = e_{'+n+'}',colors.infinity);
+    if(t==='round')m.formula=`${V(label)} = ${m.names.map(V).join(' ∧ ')}${s.flat?`,　${V(m.names.at(-1))} = ${E(n)}`:''}`;
     if(t==='cga-property'){m.formula=m.def.formula.replaceAll(V('u'),V(label)).replace(/(<span class="mv">)u/g,`$1${label}`).replaceAll(E('n'),E(n));if(m.def.property==='attitude')m.formula=`att(${V(label)}) = ${V(label)} ∨ <span class="right-complement">${E(n-1)}</span>`;}
-    if(t==='roundpoint'){if(s.radius&&info&&!info.flat){const r=Math.sqrt(Math.abs(info.radius2));scene.line(info.center,add(info.center,basis(n,0,r)),colors.result,2.3);}}
+    if(t==='roundpoint'){roundPointConstruction(m,scene,embeddedRound);m.row('a',m.mv(u));return true;}
     else{spatialRound(scene,u,A,hat(label),colors.result,{radius:s.radius});embeddedRound(scene,u,A,label,colors.result);}
     if(s.homogeneous)scene.element(u,A,label,{color:colors.result,alpha:.08});
     for(const [key,expr,color] of [['carrier',`car(${label})`,colors.a],['cocarrier',`ccr(${label})`,colors.b],['container',`con(${label})`,colors.purple],['partner',`par(${label})`,colors.warm],['conjugate',`${label}^{†}`,colors.c]])if(s[key]){
-      if(key==='carrier'||key==='cocarrier'){const f=removeInfinity(prop[key],A);scene.flat(f.blade,f.alg,hat(expr),color);}else{spatialRound(scene,prop[key],A,hat(expr),color,{radius:false});embeddedRound(scene,prop[key],A,expr,color);}m.row(expr,m.mv(prop[key]));}
+      if(key==='carrier'||key==='cocarrier'){const f=removeInfinity(prop[key],A);scene.flat(f.blade,f.alg,hat(expr),color);if(s.embeddedProperty!==false)embeddedRound(scene,prop[key],A,expr,color);if(s.propertyBlade)scene.element(prop[key],A,expr,{color,dashed:true,alpha:.07});}else{spatialRound(scene,prop[key],A,hat(expr),color,{radius:false});embeddedRound(scene,prop[key],A,expr,color);}m.row(expr,m.mv(prop[key]));}
     if(s.dual)for(const [kind,expr,color] of [['dual',`${label}^{★}`,colors.purple],['antidual',`${label}^{☆}`,colors.b]]){scene.element(prop[kind],A,expr,{color,dashed:true,alpha:.07});spatialRound(scene,prop[kind],A,hat(expr),color);m.row(expr,m.mv(prop[kind]));}
     if(s.attitude)scene.element(prop.attitude,A,`att(${label})`,{color:colors.warm,dashed:true});m.row(label,m.mv(u));if(t==='roundpoint')m.row('a • a',number(A.inner(u,u)));if(info&&!info.flat)m.row('r²',number(info.radius2));return true;
   }

@@ -17,4 +17,11 @@ body{font-size:16px}.brand{font-size:14px}.brand small{font-size:12px}.edition{f
 .right-complement{border:0;text-decoration:overline;text-decoration-thickness:1px}.left-complement{border:0;text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:.13em}
 .canvas-guide summary{cursor:pointer}.canvas-guide[open] summary{margin-bottom:10px}.workspace-bar{justify-content:flex-end}.figure-side{max-height:510px;overflow-y:auto;overscroll-behavior-y:auto;scrollbar-gutter:stable}.canvas-wrap{position:relative;top:0}
 .coord-inputs label{font-size:14px}
+.right-complement,.left-complement{position:relative;text-decoration:none;display:inline-block;padding:0 .045em}
+.right-complement::after,.left-complement::after{content:'';position:absolute;left:0;right:0;height:1px;background:currentColor;pointer-events:none}
+.right-complement::after{top:.18em}.left-complement::after{bottom:.08em}
+.right-complement:has(> .mv > .basis-letter)::after,.left-complement:has(> .mv > .basis-letter)::after{display:none}
+.right-complement > .mv > .basis-letter,.left-complement > .mv > .basis-letter{position:relative;display:inline-block}
+.right-complement > .mv > .basis-letter::after,.left-complement > .mv > .basis-letter::after{content:'';position:absolute;left:0;right:0;height:1px;background:currentColor}
+.right-complement > .mv > .basis-letter::after{top:.18em}.left-complement > .mv > .basis-letter::after{bottom:.08em}
 @media(max-width:900px){.figure-side{max-height:420px}}@media(max-width:500px){.figure-side{max-height:380px}}
