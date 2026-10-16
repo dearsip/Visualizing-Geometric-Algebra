@@ -26,7 +26,7 @@ export function configure(m){
     if(m.def.property==='container')addControls(m,check('showCarrier','Carrier'),check('showCarrierDual','Carrier antidual'));
   }
   if(t==='antidot'){m.state.lockWeight=false;m.vectors=m.vectors.map((v,i)=>scale(v,i?.65:1.35));}
-  if(t==='cga-join'){const pairs=m.controls.find(c=>c.key==='pair');pairs.options.push(...[2,3,...(n===5?[4]:[])].map(k=>['points'+k,k+' round points']));addControls(m,...Array.from({length:n-1},(_,i)=>range('pointRadius'+i,'Squared radius · p'+(i+1))),range('radiusA','Squared radius · first'),range('radiusB','Squared radius · second'));}
+  if(t==='cga-join'){const pairs=m.controls.find(c=>c.key==='pair');pairs.options.push(...[3,...(n===5?[4]:[])].map(k=>['points'+k,k+' round points']));addControls(m,...Array.from({length:n-1},(_,i)=>range('pointRadius'+i,'Squared radius · p'+(i+1))),range('radiusA','Squared radius · first'),range('radiusB','Squared radius · second'));}
   if(t==='cganorm'){
     m.controls=[];m.setVectors(2,'null');m.names=['p','q'];
     addControls(m,check('mesh','Horosphere',true),check('flat','Make flat'),check('blade','Homogeneous blade',true));
