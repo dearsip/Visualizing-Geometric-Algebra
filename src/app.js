@@ -3,6 +3,7 @@ import { chapters, notice, V, E, I, S, R, L, GP, AGP } from './content.js';
 import { Algebra, basis, formatMV, indicesBlade, basisOrder } from './algebra.js';
 import { Scene } from './scene.js';
 import { FigureModel } from './figures.js';
+import { isFreeRoundPoint } from './advanced-revisions.js';
 import { activeInputs } from './lesson-revisions.js';
 import { defaultView } from './camera.js';
 import { mathTokens,drawMath,measureMath } from './math-label.js';
@@ -25,7 +26,7 @@ function renderControls(mount){
   const {model,side}=mount;side.replaceChildren();
   for(const spec of model.controls){
     if(spec.key.startsWith('pointRadius')&&(!model.state.pointOnly||+spec.key.slice(-1)>=model.vectors.length))continue;
-    if(model.def.type==='cga-join'&&model.state.pointOnly&&['pair','flatA','flatB','radiusA','radiusB'].includes(spec.key))continue;
+    if(model.def.type==='cga-join'&&model.state.pointOnly&&['flatA','flatB','radiusA','radiusB'].includes(spec.key))continue;
     if(spec.key==='radius2'&&model.def.type==='cga-property'&&+model.state.grade!==1)continue;
     if(['radiusA','radiusB'].includes(spec.key)&&model.grades?.[spec.key==='radiusA'?0:1]!==1)continue;
     if(spec.key==='parameter2'&&+model.state.grade!==3)continue;
@@ -43,7 +44,7 @@ function renderControls(mount){
   if(model.def.type==='basis'){}else activeInputs(model).forEach(i=>{const v=model.vectors[i];
     const block=el('div','coord-editor');block.append(el('div','coord-label',`${model.names[i]||String.fromCharCode(97+i)} · coordinates`));const grid=el('div','coord-inputs');grid.style.gridTemplateColumns=`repeat(${model.n},minmax(0,1fr))`;
     v.forEach((value,j)=>{const label=el('label','',['x','y','z','w','u'][j]),input=el('input');input.type='number';input.step='.05';input.value=Number(value.toFixed(2));input.dataset.vector=i;input.dataset.coordinate=j;input.setAttribute('aria-label',`${model.names[i]} ${['x','y','z','w','u'][j]}`);
-      if(model.cga&&model.def.type!=='roundpoint'&&!(model.def.type==='conformal-transform'&&i>=+model.state.objectGrade)&&j>=model.n-2){input.readOnly=true;input.title='Null point · dependent coordinate';}
+      if(model.cga&&!isFreeRoundPoint(model,i)&&!(model.def.type==='conformal-transform'&&i>=+model.state.objectGrade)&&j>=model.n-2){input.readOnly=true;input.title='Null point · dependent coordinate';}
       if(model.def.type==='null'&&j===model.n-3){input.readOnly=true;input.title='Null-cone section';}
       if(model.state.lockWeight&&!model.cga&&j===model.n-1){input.readOnly=true;input.title='Unit slice · fixed weight';}
       if(model.state.fix&&['geometric','projective-product'].includes(model.def.type))input.disabled=true;
@@ -59,6 +60,7 @@ function sync(mount){
   const preset=mount.side.querySelector('[data-control=preset]');if(preset)preset.value=model.state.preset;
   const radius=mount.side.querySelector('[data-control=radius2]');if(radius&&radius!==document.activeElement)radius.value=model.state.radius2;
   if(radius){radius.disabled=Math.abs(model.vectors[0][model.n-2])<1e-9;radius.nextElementSibling.textContent=radius.disabled?'—':Number(model.state.radius2).toFixed(2);}
+  for(const input of mount.side.querySelectorAll('input[type=range][data-control]'))if(input!==document.activeElement&&input.dataset.control!=='radius2'){input.value=model.state[input.dataset.control];if(input.nextElementSibling)input.nextElementSibling.textContent=Number(input.value).toFixed(2);}
   const time=mount.side.querySelector('[data-control=time]');if(time&&mount.playing){time.value=model.state.time;time.nextElementSibling.textContent=model.state.time.toFixed(2);}
 }
 function animate(mount){if(!mount.playing)return;mount.model.state.time=Math.min(1,mount.model.state.time+.005);mount.scene.render();if(mount.model.state.time<1)mount.animation=requestAnimationFrame(()=>animate(mount));else{mount.playing=false;const b=[...mount.side.querySelectorAll('button')].find(b=>/Pause/.test(b.textContent));if(b)b.textContent='Play';}}
@@ -71,11 +73,11 @@ function dimensionName(def,dim){
 }
 function interactionGuide(model){
   const cga=model.cga,extra=model.n>3,fold=extra&&(!cga||model.n===5);
-  return '<b>Left drag / 左ドラッグ · 1 finger / 1本指</b> Rotate / 回転'+((model.alg.kind==='rigid'&&model.n===4)||(cga&&model.n===5)?' — upright orbit / 縦軸を保つ回転':!cga&&extra?' — free spatial rotation / 自由回転':' — upright vertical axis / 縦軸を上に保つ')+
-    (((model.alg.kind==='rigid'&&model.n===4)||(cga&&model.n===5))?'<br><b>Middle drag / 中ドラッグ · 3 fingers / 3本指</b> Free orbit / 自由回転（e₁・e₂・e₃）':'')+
+  return '<b>Left drag / 左ドラッグ · 1 finger / 1本指</b> Rotate / 回転'+' — upright orbit / 縦軸を保つ回転'+
+    (((!cga&&model.n===4)||(cga&&model.n===5))?'<br><b>Middle drag / 中ドラッグ · 3 fingers / 3本指</b> Free orbit / 自由回転（e₁・e₂・e₃）':'')+
     (fold?'<br><b>Right ↑↓ / 右ドラッグ上下 · 2 fingers / 2本指</b> Extra-axis latitude / 追加軸の緯度（0–180°）':'')+
     (cga?'<br><b>Right ←→ / 右ドラッグ左右 · 2 fingers / 2本指</b> Exchange origin / infinity axes / 追加の2軸を切替（0–90°）':'')+
-    '<br><b>Tip drag / 先端を左ドラッグ</b> Move / 移動　<b>Shift + left / Shift + 左ドラッグ</b> xy plane / xy平面'+
+    '<br>Two-finger gesture: orbit or pinch, locked until release / 2本指は回転かピンチの一方に固定<br><b>Tip drag / 先端を左ドラッグ</b> Move / 移動　<b>Shift + left / Shift + 左ドラッグ</b> xy plane / xy平面'+
     '<br><b>Click / tap / クリック・タップ</b> Activate wheel / pinch / ズームを有効化　<b>Esc / tap outside / 図の外をタップ</b> Release / 解除';
 }
 function mountFigure(def,i){
@@ -133,7 +135,7 @@ function render(){
 function setDimension(dim){dimension=dim;const url=new URL(location.href);url.searchParams.set('dim',dim);history.replaceState(null,'',url);for(const m of mounts)m.selectDimension(m.fixedDimension?4:dim);document.querySelectorAll('[data-dim]').forEach(b=>{const on=+b.dataset.dim===dim;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});navigation();supplement();}
 document.querySelectorAll('[data-dim]').forEach(b=>b.addEventListener('click',()=>setDimension(+b.dataset.dim)));
 document.addEventListener('pointerdown',e=>{for(const m of mounts)if(e.target!==m.canvas&&!m.article.querySelector('.canvas-tools').contains(e.target))m.scene.activate(false);});
-function supplement(){$('#supplement').innerHTML=supplementalHTML(chapter,dimension);}
+function supplement(){const box=$('#supplement');box.innerHTML=supplementalHTML(chapter,dimension);if(!box.innerHTML)return;const controls=el('div','dimension-switch supplement-dimensions');controls.setAttribute('role','group');controls.setAttribute('aria-label','Supplement dimension');for(const dim of [3,4]){const b=el('button','',dimensionName(chapter.figures[0],dim));b.classList.toggle('active',dimension===dim);b.setAttribute('aria-pressed',String(dimension===dim));b.addEventListener('click',()=>setDimension(dim));controls.append(b);}box.prepend(controls);}
 
 render();
 if(location.hash)requestAnimationFrame(()=>document.getElementById(location.hash.slice(1))?.scrollIntoView());

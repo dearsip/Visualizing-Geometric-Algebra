@@ -1,9 +1,9 @@
-import {radiusFor} from './advanced-revisions.js';
+import {radiusFor,isFreeRoundPoint} from './advanced-revisions.js';
 import { displacementShading,displacementSurface } from './projective-field.js';
 import { roundPointConstruction } from './round-point.js';
 import { Algebra, EPS, basis, add, sub, scale, dot, length, unit } from './algebra.js';
 import { colors } from './scene.js';
-import { embed, affine, perpendicularFrame, cgaProperties, cgaRound, removeInfinity, spatialRound, closestPoint } from './geometry.js';
+import { embed, affine, perpendicularFrame, cgaProperties, cgaRound, removeInfinity, spatialRound, alignmentGuides, closestPoint } from './geometry.js';
 import { continuousFactors } from './frames.js';
 import { V,E,I,S,R,L,GP,AGP } from './content.js';
 const zero=n=>Array(n).fill(0),hat=x=>`\\hat{${x}}`,rc=x=>`\\bar{${x}}`,lc=x=>`\\underbar{${x}}`,name=k=>['1','p','l','g','s'][k]||'𝟙';
@@ -47,12 +47,11 @@ export function configure(m){
 function projectionPairs(n,variant){const anti=variant>=2;return (n===3?(anti?[[2,1]]:[[1,2]]):anti?[[3,1],[2,1],[3,2]]:[[1,3],[1,2],[2,3]]).map(([a,b])=>[`${a}:${b}`,`${name(a)} → ${name(b)}`]);}
 function cgaPairs(n,t){let pairs=t==='cga-join'?[[1,1],[1,2],...(n===5?[[1,3],[2,2]]:[])]:t==='cga-meet'?(n===4?[[3,3],[3,2]]:[[4,4],[4,3],[3,3],[4,2]]):(n===4?[[1,2],[1,3],[2,3]]:[[1,2],[1,3],[1,4],[2,3],[2,4],[3,4]]);return pairs.map(([a,b])=>[`${a}:${b}`,`${roundName(a,n)} / ${roundName(b,n)}`]);}
 const roundName=(k,n)=>k===1?'Round point':k===2?'Dipole':k===3?'Circle':'Sphere';
-function roundSeed(m,k,side){if(side&&m.def.type==='cga-meet'&&k===2){const center=[-.25,.4,...Array(m.n-4).fill(0)];return [-1,1].map(a=>embed(add(center,basis(m.n-2,1,a*.8)),m.n));}const x=Array(m.n-2).fill(0);x[0]=side? .7:-.7;if(side)x[1]=.35;if(k===1)x[1]=.45;if(side&&m.n===5)x[2]=.35;const r=side?1.1:1;if(k===1)return [embed(x,m.n)];if(k===2)return [-1,1].map(s=>embed(add(x,basis(m.n-2,side?1:0,s*r)),m.n));if(k===3)return [0,2*Math.PI/3,4*Math.PI/3].map(t=>{const p=[...x];p[0]+=r*Math.cos(t);p[side&&m.n===5?2:1]+=r*Math.sin(t);return embed(p,m.n);});return m.roundSeeds(x,r);}
+function roundSeed(m,k,side){if(m.def.type==='cga-expansion'&&k===1&&!side)return [embed([-.2,1.1,...Array(m.n-4).fill(.6)],m.n)];if(side&&m.def.type==='cga-meet'&&k===2){const center=[-.25,.4,...Array(m.n-4).fill(0)];return [-1,1].map(a=>embed(add(center,basis(m.n-2,1,a*.8)),m.n));}const x=Array(m.n-2).fill(0);x[0]=side? .7:-.7;if(side)x[1]=.35;if(k===1)x[1]=.45;if(side&&m.n===5)x[2]=.35;const r=side?1.1:1;if(k===1)return [embed(x,m.n)];if(k===2)return [-1,1].map(s=>embed(add(x,basis(m.n-2,side?1:0,s*r)),m.n));if(k===3)return [0,2*Math.PI/3,4*Math.PI/3].map(t=>{const p=[...x];p[0]+=r*Math.cos(t);p[side&&m.n===5?2:1]+=r*Math.sin(t);return embed(p,m.n);});return m.roundSeeds(x,r);}
 function setPair(m){m.grades=String(m.state.pair).split(':').map(Number);const [a,b]=m.grades;if(m.cga){m.vectors=[...roundSeed(m,a,0),...roundSeed(m,b,1)];const labels=['p','q','r','t'];m.names=[...labels.slice(0,a).map(x=>x+'₁'),...labels.slice(0,b).map(x=>x+'₂')];}else{m.setVectors(a+b,'point');m.names=m.vectors.map((_,i)=>['p','q','r','s','t','v','w','k'][i]);if(m.def.type==='projection'){let next=0;const letters=a===1||b===1?['q','r','s','t','v']:['p','q','r','s','t'];m.names=m.grades.flatMap(k=>k===1?['p']:Array.from({length:k},()=>letters[next++]));}}m.frames?.clear();}
 export function update(m,key,value){
   const t=m.def.type,n=m.n,h=n-1;
   if(key==='infinity')m.state.lockWeight=false;
-  if(key==='flat'&&t==='round'&&m.def.grade===2)m.names[0]=value?'p₀':'p';
   if(key==='operation'&&t==='interior'){m.state.operation=value;m.names=+value>=2?['q','r','s']:['p','q','r'];return true;}
   if(key==='grade'&&['cga-property','containment'].includes(t)){m.state.grade=+value;m.vectors=[...(t==='containment'?[embed([-.4,.6,...(n===5?[.3]:[])],n)]:[]),...roundSeed(m,+value,0)];m.names=m.vectors.map((_,i)=>['p','q','r','t','v'][i]);if(t==='containment')m.names[0]='p₀';return true;}
   if(key==='unitLineWeight'){const p=affine(m.vectors[0]),q=affine(m.vectors[1]);if(p&&q&&length(sub(q,p))>EPS){const c=scale(add(p,q),.5),d=scale(unit(sub(q,p)),.5);m.vectors=[sub(c,d),add(c,d)];}return true;}
@@ -82,12 +81,12 @@ function restrict(frame,index){const row=frame.map(v=>v[index]);if(length(row)<E
 export function move(m,i,next){
   const t=m.def.type,n=m.n,old=m.vectors[i];if(!old)return true;
   if(m.state.fix||m.state.lockWeight){const space=dragSpace(m,i),delta=sub(next,old);next=add(old,space.reduce((s,v)=>add(s,scale(v,dot(v,delta)/(dot(v,v)||1))),zero(n)));}
-  if(m.cga&&t!=='roundpoint'&&!(t==='conformal-transform'&&i>=+m.state.objectGrade)){const x=next.slice(0,n-2);if(t==='null')x[n-3]=0;next=embed(x,n,t==='cga-dot'?m.state[i===0?'radiusA':'radiusB']:radiusFor(m,i));}
+  if(m.cga&&!isFreeRoundPoint(m,i)&&!(t==='conformal-transform'&&i>=+m.state.objectGrade)){const x=next.slice(0,n-2);if(t==='null')x[n-3]=0;next=embed(x,n,t==='cga-dot'?m.state[i===0?'radiusA':'radiusB']:radiusFor(m,i));}
   if(m.state.unitWeight&&Math.abs(next[n-1])>EPS)next=scale(next,1/next[n-1]);m.vectors[i]=next;
   if(t==='roundpoint'){const w=next[n-2];if(Math.abs(w)>EPS)m.state.radius2=-m.alg.inner(m.alg.vector(next),m.alg.vector(next))/(w*w);}
   return true;
 }
-function inputs(m,scene,indices=activeInputs(m),labels=null){for(const i of indices){scene.handle(m.vectors[i],labels?.[i]??m.names[i],i,m.grades?(i<m.grades[0]?colors.a:colors.b):[colors.a,colors.b,colors.c][i%3],null,false,dragSpace(m,i));if(m.cga&&m.def.type!=='roundpoint')scene.handles.at(-1).retract=surfaceRetraction(m,i);}}
+function inputs(m,scene,indices=activeInputs(m),labels=null){for(const i of indices){scene.handle(m.vectors[i],labels?.[i]??m.names[i],i,m.grades?(i<m.grades[0]?colors.a:colors.b):[colors.a,colors.b,colors.c][i%3],null,false,dragSpace(m,i));if(m.cga&&!isFreeRoundPoint(m,i))scene.handles.at(-1).retract=surfaceRetraction(m,i);}}
 export function surfaceRetraction(m,i){return v=>{const n=m.n,w=v[n-2],old=m.vectors[i],radius=m.def.type==='cga-dot'?m.state[i===0?'radiusA':'radiusB']:radiusFor(m,i);if(Math.abs(w)<1e-5)return old;const x=v.slice(0,n-2).map(x=>x/w);if(m.def.type==='null')x[n-3]=0;return embed(x,n,radius);};}
 function flat(scene,m,a,label,color,homogeneous=false){const unit=Math.abs(m.alg.weightNorm(a)-1)<1e-7,k=m.alg.gradeOf(a),coords=k===1?m.alg.coordinates(a):null,duplicate=unit&&coords&&scene.labels.some(x=>x.text===label&&length(sub(x.p,coords))<1e-7);scene.flat(a,m.alg,duplicate?'':unit?label:hat(label),color);if(homogeneous&&k>1){const fs=sourceFactors(m,a);if(fs)scene.blade(fs,label,{color,alpha:.1});else scene.element(a,m.alg,label,{color,alpha:.1});}}
 function sourceFactors(m,a){const k=m.alg.gradeOf(a);if(k<2)return null;for(let i=0;i<=m.vectors.length-k;i++){const fs=m.vectors.slice(i,i+k),b=m.alg.blade(fs);if(length(sub(a,b))<1e-7)return fs;}return null;}
@@ -222,9 +221,9 @@ function paintSandwich(m,scene){
     m.formula=V(outLabel)+' = '+V('a')+' '+GP+' '+V(inLabel)+' '+GP+' '+V('a')+'<sup>−1</sup>';
   }else{
     scene.flat(g,A,hat('g'),colors.purple);scene.element(g,A,'g',{color:colors.purple,dashed:true,alpha:.05});
-    const complemented=A.rc(v0),complementOut=A.rc(out),fs=balanced(m,complemented,'sandwich-input'),gs=fs.map(v=>A.coordinates(scale(A.reflect(A.vector(v),av),-1))),check=A.blade(gs);if(dot(check,complementOut)<0)gs[gs.length-1]=scale(gs.at(-1),-1);
+    const complemented=A.rc(v0),complementOut=A.rc(out),fs=spreadFrame(balanced(m,complemented,'sandwich-input')),gs=fs.map(v=>A.coordinates(scale(A.reflect(A.vector(v),av),-1))),check=A.blade(gs);if(dot(check,complementOut)<0)gs[gs.length-1]=scale(gs.at(-1),-1);
     scene.blade(fs,rc(inLabel),{color:colors.a,dashed:true,alpha:.08});scene.blade(gs,rc(outLabel),{color:colors.result,dashed:true,alpha:.08});
-    fs.forEach((v,i)=>scene.line(v,gs[i],colors.mesh,1,true));
+    fs.forEach((v,i)=>{scene.line(v,gs[i],colors.mesh,1.6,true);Object.assign(scene.commands.at(-1),{complementConnector:i});});
     if(s.orbit&&p0){const spatial=vs[0].slice(0,h),norm=length(spatial);if(norm>EPS){const normal=unit(spatial),offset=vs[0][h]/norm,distance=dot(normal,p0.slice(0,h))+offset,frame=perpendicularFrame(normal).map(v=>[...v,0]);for(const d of [distance,-distance])scene.locusSpan([...scale(normal,d-offset),1],frame,colors.green);}}
     const other=scale(A.agp(A.agp(g,v0),g),1/q);m.row('g ⟇ '+inLabel+' ⟇ g / (a • a)',m.mv(other));m.row('Equality residual',number(length(sub(out,other))));
     m.formula=V(outLabel)+' = <span class="left-complement">'+V('a')+' '+GP+' '+R(inLabel)+' '+GP+' '+V('a')+'<sup>−1</sup></span> = '+V('g')+' '+AGP+' '+V(inLabel)+' '+AGP+' '+V('g')+' / ('+V('a')+' • '+V('a')+')';
@@ -243,10 +242,10 @@ function paintConformal(m,scene){
     if(t==='cga-property'){m.formula=m.def.formula.replaceAll(V('u'),V(label)).replace(/(<span class="mv">)u/g,`$1${label}`).replaceAll(E('n'),E(n));if(m.def.property==='attitude')m.formula=`att(${V(label)}) = ${V(label)} ∨ <span class="right-complement">${E(n-1)}</span>`;}
     if(t==='roundpoint'){roundPointConstruction(m,scene,embeddedRound);m.row('a',m.mv(u));return true;}
     else{spatialRound(scene,u,A,hat(label),colors.result,{radius:s.radius});embeddedRound(scene,u,A,label,colors.result);}
-    if(s.homogeneous)scene.element(u,A,label,{color:colors.result,alpha:.08});
+    if(s.homogeneous){const fs=t==='round'?s.flat?[...vs.slice(0,-1),basis(n,n-1)]:vs:t==='cga-property'?vs:null;if(fs)scene.blade(fs,label,{color:colors.result,alpha:.08});else scene.element(u,A,label,{color:colors.result,alpha:.08});}
     for(const [key,expr,color] of [['carrier',`car(${label})`,colors.a],['cocarrier',`ccr(${label})`,colors.b],['container',`con(${label})`,colors.purple],['partner',`par(${label})`,colors.warm],['conjugate',`${label}^{†}`,colors.c]])if(s[key]){
       if(key==='carrier'||key==='cocarrier'){const f=removeInfinity(prop[key],A);scene.flat(f.blade,f.alg,hat(expr),color);if(s.embeddedProperty!==false)embeddedRound(scene,prop[key],A,expr,color);if(s.propertyBlade)scene.element(prop[key],A,expr,{color,dashed:true,alpha:.07});}else{if(key!=='partner')spatialRound(scene,prop[key],A,hat(expr),color,{radius:false});embeddedRound(scene,prop[key],A,expr,color);}m.row(expr,m.mv(prop[key]));}
-    if(s.dual){const expr=label+'^{★}';scene.element(prop.dual,A,expr,{color:colors.purple,dashed:true,alpha:.05});scene.element(prop.antidual,A,label+'^{☆}',{color:colors.b,dashed:true,alpha:.05});spatialRound(scene,prop.dual,A,'','#85808f',{preserveColor:true});embeddedRound(scene,prop.dual,A,'','#85808f',{preserveColor:true});m.formula=V(label)+'<sup>★</sup> = −'+V(label)+'<sup>☆</sup>';m.row(expr,m.mv(prop.dual));m.row(label+'^{☆}',m.mv(prop.antidual));}
+    if(s.dual){const expr=label+'^{★}';scene.element(prop.dual,A,expr,{color:colors.purple,dashed:true,alpha:.05});scene.element(prop.antidual,A,label+'^{☆}',{color:colors.b,dashed:true,alpha:.05});spatialRound(scene,prop.dual,A,hat(label+'^{☆}'),'#85808f',{preserveColor:true});embeddedRound(scene,prop.dual,A,'','#85808f',{preserveColor:true});m.formula=V(label)+'<sup>★</sup> = −'+V(label)+'<sup>☆</sup>';m.row(expr,m.mv(prop.dual));m.row(label+'^{☆}',m.mv(prop.antidual));}
     if(s.showDual){scene.element(prop.antidual,A,label+'^{☆}',{color:colors.purple,dashed:true,alpha:.06});embeddedRound(scene,prop.antidual,A,'',colors.purple);spatialRound(scene,prop.antidual,A,'',colors.purple);}
     if(s.showCarrier||s.showCarrierDual){const d=A.dual(prop.carrier,true);if(s.showCarrier){embeddedRound(scene,prop.carrier,A,'car('+label+')',colors.a);scene.element(prop.carrier,A,'car('+label+')',{color:colors.a,alpha:.04});}if(s.showCarrierDual){scene.element(d,A,'car('+label+')^{☆}',{color:colors.purple,dashed:true,alpha:.05});embeddedRound(scene,d,A,'',colors.purple);spatialRound(scene,d,A,'',colors.purple);}}
     if(s.attitude)scene.element(prop.attitude,A,`att(${label})`,{color:colors.warm,dashed:true});m.row(label,m.mv(u));if(t==='roundpoint')m.row('a • a',number(A.inner(u,u)));if(info&&!info.flat)m.row('r²',number(info.radius2));return true;
@@ -260,7 +259,8 @@ function paintConformal(m,scene){
   }
   if(['cga-join','cga-meet','cga-expansion'].includes(t)){
     inputs(m,scene);const [ka,kb]=m.grades,first=vs.slice(0,ka),second=vs.slice(ka,ka+kb),x=A.blade(s.flatA&&ka>1?[...first.slice(0,-1),basis(n,n-1)]:first),y=A.blade(s.flatB&&kb>1?[...second.slice(0,-1),basis(n,n-1)]:second),baseA=objectSymbol(ka,s.flatA),base=objectSymbol(kb,s.flatB),xn=baseA+(ka===1||baseA===base?'₁':''),yn=base+(kb===1||baseA===base?'₂':''),op=t==='cga-join'?'∧':t==='cga-meet'?'∨':'∧',d=t==='cga-expansion'?A.dual(y,true):y,expr=`${xn} ${op} ${yn}${t==='cga-expansion'?'^{☆}':''}`,out=op==='∨'?A.antiwedge(x,y):A.wedge(x,d);
-    for(const [u,label,color] of [[x,xn,colors.a],[y,yn,colors.b],[out,expr,colors.result]]){if(s.spatial)spatialRound(scene,u,A,hat(label),color,{endpoints:u===out&&t==='cga-join'&&(ka===1||kb===1)});embeddedRound(scene,u,A,label,color,{endpoints:u===out&&t==='cga-join'&&(ka===1||kb===1)});if(s.homogeneous)scene.element(u,A,label,{color,alpha:.06});m.row(label,m.mv(u));}
+    for(const [u,label,color] of [[x,xn,colors.a],[y,yn,colors.b],[out,expr,colors.result]]){if(s.spatial)spatialRound(scene,u,A,hat(label),color);embeddedRound(scene,u,A,label,color,{endpoints:u===out&&t==='cga-join'&&(ka===1||kb===1)});if(s.homogeneous){const fs=u===x?(s.flatA&&ka>1?[...first.slice(0,-1),basis(n,n-1)]:first):u===y?(s.flatB&&kb>1?[...second.slice(0,-1),basis(n,n-1)]:second):null;if(fs){if(fs.length>1)scene.blade(fs,label,{color,alpha:.06});}else scene.element(u,A,label,{color,alpha:.06});}m.row(label,m.mv(u));}
+    if(t==='cga-join'){if(ka===1)alignmentGuides(scene,x,out,A,colors.mesh);if(kb===1)alignmentGuides(scene,y,out,A,colors.mesh);}if(t==='cga-meet'&&A.gradeOf(out)===1){alignmentGuides(scene,out,x,A,colors.mesh);alignmentGuides(scene,out,y,A,colors.mesh);}
     if(t==='cga-expansion'&&s.dual){scene.element(d,A,`${yn}^{☆}`,{color:colors.purple,dashed:true,alpha:.08});if(s.spatial)spatialRound(scene,d,A,hat(`${yn}^{☆}`),colors.purple);embeddedRound(scene,d,A,`${yn}^{☆}`,colors.purple);}
     m.formula=`${V(xn)} ${op} ${V(yn)}${t==='cga-expansion'?'<sup>☆</sup>':''}`;return true;
   }
@@ -271,14 +271,16 @@ const objectSymbol=(k,flat=false)=>flat&&k>1?['','','p','l','g'][k]||'𝟙':roun
 export function embeddedRound(scene,u,A,label,color,options={}){
   const info=cgaRound(u,A);if(!info)return info;const imaginary=info.radius2< -EPS;if(imaginary&&!options.preserveColor)color=colors.purple;
   if(info.flat){const B=info.alg,fs=B.factor(info.blade),h=B.n-1,pivot=fs.find(v=>Math.abs(v[h])>EPS);if(!pivot)return info;const center=scale(pivot,1/pivot[h]).slice(0,h),dirs=[];for(const f of fs){let d=sub(f,scale(pivot,f[h]/pivot[h])).slice(0,h);for(const v of dirs)d=sub(d,scale(v,dot(v,d)));if(length(d)>EPS)dirs.push(unit(d));}
-    const mapped=x=>embed(x,A.n);if(!dirs.length)scene.point(mapped(center),label,color);
-    for(let axis=0;axis<dirs.length;axis++)for(let offset=dirs.length===1?0:-2;offset<= (dirs.length===1?0:2);offset+=.8){let prev=null;for(let t=-3;t<=3;t+=.08){const p=add(center,add(scale(dirs[axis],t),scale(dirs[(axis+1)%dirs.length],offset)));if(length(p)>4){prev=null;continue;}const q=mapped(p);if(prev)scene.line(prev,q,color,offset===0?2:1,offset!==0,.75);prev=q;}}scene.label(mapped(center),label,color,{dy:-15});return info;
+    const mapped=x=>embed(x,A.n);const duplicate=!dirs.length&&scene.handles?.some(h=>length(sub(h.v,mapped(center)))<1e-7);if(!dirs.length&&!duplicate)scene.point(mapped(center),label,color);
+    for(let axis=0;axis<dirs.length;axis++)for(let offset=dirs.length===1?0:-2;offset<= (dirs.length===1?0:2);offset+=(options.gridStep||.8)){let prev=null;for(let t=-3;t<=3;t+=.08){const p=add(center,add(scale(dirs[axis],t),scale(dirs[(axis+1)%dirs.length],offset)));if(length(p)>4){prev=null;continue;}const q=mapped(p);if(prev)scene.line(prev,q,color,offset===0?2:1,offset!==0,.75);prev=q;}}if(dirs.length)scene.label(mapped(center),label,color,{dy:-15});return info;
   }
   const radius=Math.sqrt(Math.abs(info.radius2)),dirs=info.dirs,center=info.center.slice(0,A.n-2),q=x=>imaginary?[...x,1,dot(center,x)+(info.radius2-dot(center,center))/2]:embed(x,A.n);
-  if(A.gradeOf(u)===1){const raw=A.coordinates(u);if(!scene.handles.some(h=>length(sub(h.v,raw))<1e-7))scene.point(raw,label,color,4);if(radius>EPS){const fs=Array.from({length:A.n-2},(_,i)=>basis(A.n-2,i));for(let axis=0;axis<(A.n===4?1:3);axis++){let prev;for(let i=0;i<=64;i++){const t=i*Math.PI/32,p=q(add(center,add(scale(fs[axis],radius*Math.cos(t)),scale(fs[(axis+1)%fs.length],radius*Math.sin(t)))));if(prev)scene.line(prev,p,color,1,imaginary,.8);prev=p;}}}return info;}
+  if(A.gradeOf(u)===1){const coordinates=A.coordinates(u),raw=scale(coordinates,1/coordinates[A.n-2]);if(!scene.handles.some(h=>length(sub(h.v,raw))<1e-7))scene.point(raw,label,color,4);if(radius>EPS){const fs=Array.from({length:A.n-2},(_,i)=>basis(A.n-2,i));for(let axis=0;axis<(A.n===4?1:3);axis++){let prev;for(let i=0;i<=64;i++){const t=i*Math.PI/32,p=q(add(center,add(scale(fs[axis],radius*Math.cos(t)),scale(fs[(axis+1)%fs.length],radius*Math.sin(t)))));if(prev)scene.line(prev,p,color,1,imaginary,.8);prev=p;}}}return info;}
   const point=d=>q(add(center,scale(d.slice(0,A.n-2),radius)));
   if(dirs.length===1){scene.line(point(dirs[0]),point(scale(dirs[0],-1)),color,2);scene.label(scale(add(point(dirs[0]),point(scale(dirs[0],-1))),.5),label,color,{dy:-12});if(options.endpoints){scene.point(point(dirs[0]),'',color,4);scene.point(point(scale(dirs[0],-1)),'',color,4);}}
   else if(dirs.length===2){let previous=null;for(let i=0;i<=72;i++){const t=i*Math.PI/36,p=point(add(scale(dirs[0],Math.cos(t)),scale(dirs[1],Math.sin(t))));if(previous)scene.line(previous,p,color,2);previous=p;}scene.label(point(dirs[0]),label,color,{dy:-13});}
   else if(dirs.length>=3){const cloud=[];for(let axis=0;axis<3;axis++){let previous=null;for(let i=0;i<=64;i++){const t=i*Math.PI/32,p=point(add(scale(dirs[axis],Math.cos(t)),scale(dirs[(axis+1)%3],Math.sin(t))));if(previous)scene.line(previous,p,color,.8);previous=p;cloud.push(p);}}for(let lat=1;lat<6;lat++){let previous=null;for(let i=0;i<=48;i++){const a=lat*Math.PI/6,t=i*Math.PI/24,p=point(add(scale(dirs[2],Math.cos(a)),add(scale(dirs[0],Math.sin(a)*Math.cos(t)),scale(dirs[1],Math.sin(a)*Math.sin(t)))));cloud.push(p);if(previous)scene.line(previous,p,color,.8,true,.5);previous=p;}}scene.commands.push({kind:'hull',points:cloud,color,alpha:.035});scene.label(q(center),label,color,{dy:-15});}
   return info;
 }
+
+function spreadFrame(frame){const fs=frame.map(v=>[...v]);for(let j=1;j<fs.length;j++){const a=fs[0],b=fs[j],t=.63+j*.13;fs[0]=add(scale(a,Math.cos(t)),scale(b,Math.sin(t)));fs[j]=add(scale(a,-Math.sin(t)),scale(b,Math.cos(t)));}return fs;}

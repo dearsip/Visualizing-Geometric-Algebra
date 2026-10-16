@@ -43,7 +43,7 @@ export function spatialRound(scene,a,alg,label,color,options={}) {
   if(info.radius2< -EPS&&!options.preserveColor)color='#9b70af';
   const {center,radius2,dirs}=info,r=Math.sqrt(Math.abs(radius2)),imaginary=radius2< -EPS;
   if(alg.gradeOf(a)===1){scene.point(center,label,color,4);if(r>EPS)scene.sphere(center,r,color,imaginary,.6,Array.from({length:alg.n-2},(_,i)=>basis(alg.n,i)));}
-  else if(dirs.length===1){if(options.endpoints){scene.point(add(center,scale(dirs[0],r)),'',color,4);scene.point(add(center,scale(dirs[0],-r)),'',color,4);}scene.label(center,label,color,{dy:-12});scene.line(add(center,scale(dirs[0],-r)),add(center,scale(dirs[0],r)),color,1,true,.5);}
+  else if(dirs.length===1){if(options.endpoints!==false){scene.point(add(center,scale(dirs[0],r)),'',color,4);scene.point(add(center,scale(dirs[0],-r)),'',color,4);}scene.label(center,label,color,{dy:-12});scene.line(add(center,scale(dirs[0],-r)),add(center,scale(dirs[0],r)),color,1,true,.5);}
   else if(dirs.length===2){scene.circle(center,dirs[0],dirs[1],r,color,imaginary,.95);scene.label(add(center,scale(dirs[0],r)),label,color,{dy:-10});}
   else if(dirs.length>=3){scene.sphere(center,r,color,true,.8,dirs);scene.label(center,label,color,{dy:-15});}
   if(options.radius){const direction=dirs[0]||basis(alg.n,0);scene.line(center,add(center,scale(direction,r)),color,2);scene.label(add(center,scale(direction,r*.5)),imaginary?'|r|':'r',color,{dy:15,size:16,scalar:true});}
@@ -92,4 +92,16 @@ export function reflectionPath(planes,p,dim,t){
   const first=composeReflections(planes.slice(0,1),dim),pre=transformPoint(p,first,dim);
   // Factor out a fixed reflection. The remaining proper isometry has a screw path.
   return transformPoint(pre,screwInterpolate(composeReflections(planes.slice(1),dim),t),dim);
+}
+
+// Intersections of a round point's spatial sphere with its aligned container.
+// A circle gives two points; a sphere gives a representative antipodal pair.
+export function alignmentGuides(scene,point,object,A,color){
+  if(A.gradeOf(point)!==1||A.gradeOf(object)<3)return;
+  const p=cgaRound(point,A),o=cgaRound(object,A);if(!p||!o||p.flat||o.flat||Math.abs(p.radius2)<=EPS||Math.abs(o.radius2)<=EPS)return;
+  const pr2=Math.abs(p.radius2),or2=Math.abs(o.radius2),delta=sub(p.center,o.center),frame=o.dirs,parallel=frame.reduce((v,d)=>add(v,scale(d,dot(delta,d))),Array(A.n).fill(0)),distance=length(parallel),rhs=(or2+dot(delta,delta)-pr2)/2;
+  if(distance<EPS)return;const direction=scale(parallel,1/distance),h=rhs/distance,r2=or2-h*h;if(r2<=EPS)return;
+  const candidates=frame.map(d=>sub(d,scale(direction,dot(d,direction)))),perp=candidates.find(d=>length(d)>EPS);if(!perp)return;
+  const center=add(o.center,scale(direction,h)),offset=scale(unit(perp),Math.sqrt(r2)),right=Math.abs(dot(delta,delta)-or2-pr2)<1e-5*(1+dot(delta,delta));
+  for(const q of [add(center,offset),sub(center,offset)]){scene.line(q,p.center,color,1,true,.7);if(right)scene.line(q,o.center,color,1,true,.7);}
 }

@@ -18,7 +18,7 @@ npm run dev
 
 ## Controls
 
-- 背景を左ドラッグ: 掴んだ側がマウスに追従するOrbit。3Dはe₃を上に保ち、仰角は±90°の直前まで。3D Flat / 3D RoundはUpright orbit。中ドラッグ／3本指ドラッグではe₁e₂e₃の間で自由回転します。
+- 背景を左ドラッグ: 掴んだ側がマウスに追従するOrbit。3Dはe₃を上に保ち、仰角は±90°の直前まで。4D Euclidean / 3D Flat / 3D Roundもupright orbit。中ドラッグ／3本指ドラッグではe₁e₂e₃の間で自由回転します。
 - 右ドラッグ上下: 点の上を含め、現在の上方向と追加軸の緯度を0–180°で変えます。3Dでは右ドラッグは動作しません。
 - CGAで右ドラッグ左右: origin axisとPoint at infinityの軸を滑らかに交換。
 - vectorの先端をドラッグ: 表示の視線に垂直な面内で移動。
@@ -26,7 +26,7 @@ npm run dev
 - 数値欄: 隠れている次元を含む成分の編集。
 - Fix value: Wedge / DotではConstant-product locusへ制約。Geometric Productでは両入力を固定。
 - 図をクリック／タップするとWheel / Pinchを有効化。Escか図の外で解除。非アクティブな図はページスクロールを妨げません。
-- タッチは1本指が左ドラッグ、2本指の中心の移動が右ドラッグ、指間距離がPinch。3本指は自由回転。複数指から指が減った時は、全て離すまで操作を中断します。
+- タッチは1本指が左ドラッグ、2本指は中心の移動による右ドラッグかPinchの一方に判定後固定。3本指は自由回転。複数指から指が減った時は、全て離すまで操作を中断します。
 - Complementの点線の先端: 直交factorの姿勢を調整。Scaleはfactorに均等配分します。
 - Perspective / Orthographic: 高次元から3Dへの線形射影の後に適用するカメラ投影。既定はOrthographic。Home / View ↺で初期視点。
 - 操作説明の開閉状態は図・ページ間で共通です。右側の操作欄は独立スクロールします。

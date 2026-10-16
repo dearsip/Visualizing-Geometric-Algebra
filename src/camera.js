@@ -2,44 +2,40 @@ import { basis, add, scale, dot, length, EPS } from './algebra.js';
 export const HALF_PI=Math.PI/2;
 export const ELEVATION_LIMIT=HALF_PI-.003;
 export const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
-export function defaultView(n,cga=false,section=false,flat=false){return {yaw:.42,pitch:.58,roll:0,extra:0,conformal:0,section,flatGeometry:flat,zoom:1.15,perspective:false,center:flat?basis(n,n-1,.5):cga?add(basis(n,n-1,section?0:.65),basis(n,n-2,.5)):undefined};}
-function spatialFrame(view){
-  if(view.frame)return view.frame;
+export function defaultView(n,cga=false,section=false,flat=false){return {yaw:.42,pitch:.58,roll:0,extra:cga&&n===5?HALF_PI:0,conformal:0,section,flatGeometry:flat,zoom:1.15,perspective:false,center:flat?basis(n,n-1,.5):cga?add(basis(n,n-1,section?0:.65),basis(n,n-2,.5)):undefined};}
+const identity=()=>[[1,0,0],[0,1,0],[0,0,1]];
+const apply=(matrix,p)=>matrix.map(row=>dot(row,p));
+const multiply=(a,b)=>a.map(row=>b[0].map((_,j)=>row.reduce((sum,x,k)=>sum+x*b[k][j],0)));
+export function uprightFrame(view){
   const c=Math.cos(view.yaw),s=Math.sin(view.yaw),p=Math.cos(view.pitch),q=Math.sin(view.pitch);
   return [[c,s,0],[-s*q,c*q,p],[s*p,-c*p,q]];
 }
-// Camera coordinates: right, up, near. e2 is forward/away; no algebra-coordinate negation.
-export function toView(p,view,n,cga=false){
+// Independent spatial/extra-axis rotations precede the fold, then the upright camera.
+// Screen-collapsed coordinates retain depth for perspective and depth-preserving dragging.
+export function projectedSpace(p,view,n,cga=false){
+  const spatial=apply(view.frame||identity(),p.slice(0,3));
   if(cga){
-    const beta=view.conformal||0,alpha=view.extra??HALF_PI,origin=p[n-2],infinity=p[n-1],vertical=infinity*Math.cos(beta)+origin*Math.sin(beta),other=origin*Math.cos(beta)-infinity*Math.sin(beta);
-    let projected,hidden;
-    if(n===4){projected=view.section?[p[0],other,vertical]:[p[0],p[1],vertical];hidden=view.section?0:other;}
-    else if(view.section){
-      const spatial=spatialFrame(view).map(row=>dot(row,p.slice(0,3))),up=spatial[1];
-      return [spatial[0],up*Math.cos(alpha)+origin*Math.sin(alpha+beta)+infinity*Math.cos(beta),spatial[2]-up*Math.sin(alpha)+origin*Math.cos(alpha+beta)-infinity*Math.sin(beta)];
-    }
-    else{projected=[p[0],p[1],p[2]*Math.cos(alpha)+vertical*Math.sin(alpha)];hidden=vertical*Math.cos(alpha)-p[2]*Math.sin(alpha)+other;}
-    if(n===5){const spatial=spatialFrame(view).map(row=>dot(row,p.slice(0,3))),up=spatial[1];return [spatial[0],up*Math.cos(alpha)+vertical*Math.sin(alpha),spatial[2]+vertical*Math.cos(alpha)-up*Math.sin(alpha)+other];}
-    const result=spatialFrame({...view,frame:null}).map(row=>dot(row,projected));result[2]+=hidden;return result;
+    const beta=view.conformal||0,origin=p[n-2],infinity=p[n-1],vertical=infinity*Math.cos(beta)+origin*Math.sin(beta),collapsed=origin*Math.cos(beta)-infinity*Math.sin(beta);
+    if(n===4)return {point:view.section?[p[0],collapsed,vertical]:[p[0],p[1],vertical],depth:view.section?0:collapsed};
+    const alpha=view.extra??HALF_PI,up=spatial[2],point=[spatial[0],spatial[1],up*Math.cos(alpha)+vertical*Math.sin(alpha)];
+    // The construction section unfolds the otherwise hidden extra direction into
+    // the initial spatial e2 direction. It never modifies the gesture state.
+    if(view.section)point[1]+=collapsed;
+    return {point,depth:vertical*Math.cos(alpha)-up*Math.sin(alpha)+(view.section?0:collapsed)};
   }
-  const a=view.extra||0,spatial=[p[0],p[1],p[2]||0];
-  let v=spatialFrame(view).map(row=>dot(row,spatial));
-  if(n===4){const up=v[1];v[1]=up*Math.cos(a)+p[3]*Math.sin(a);v[2]+=p[3]*Math.cos(a)-up*Math.sin(a);}
-  return v;
+  if(n===4){const alpha=view.extra||0,up=spatial[2];return {point:[spatial[0],spatial[1],up*Math.cos(alpha)+p[3]*Math.sin(alpha)],depth:p[3]*Math.cos(alpha)-up*Math.sin(alpha)};}
+  return {point:spatial,depth:0};
 }
+export function toView(p,view,n,cga=false){const projected=projectedSpace(p,view,n,cga),v=apply(uprightFrame(view),projected.point);v[2]+=projected.depth;return v;}
 export function orbit(view,n,cga,dx,dy,button=0){
-  if(button===2){if(n===3&&!cga)return;if(!cga||n===5)view.extra=clamp(view.extra-dy*.009,0,Math.PI);if(cga){view.conformal=clamp(view.conformal+dx*.009,0,HALF_PI);if(n===5&&view.section)view.extra=clamp(view.extra,0,Math.PI-view.conformal);}return;}
-  const mixed=(n===4&&!cga&&view.flatGeometry)||(n===5&&cga);
-  if(button===1&&!mixed)return;
-  if(button===0&&(n===3||cga||mixed)){
-    const before=spatialFrame({...view,frame:null});view.yaw-=dx*.008;view.pitch=clamp(view.pitch+dy*.007,-ELEVATION_LIMIT,ELEVATION_LIMIT);
-    if(view.frame){const after=spatialFrame({...view,frame:null}),rotation=after.map(row=>before.map(other=>dot(row,other)));view.frame=rotation.map(row=>view.frame[0].map((_,j)=>row.reduce((sum,x,k)=>sum+x*view.frame[k][j],0)));}
-    return;
-  }
-  // Rotate the spatial frame about display axes; the added-axis display directions stay fixed.
-  const frame=spatialFrame(view),x=dy*.007,y=dx*.008,cx=Math.cos(x),sx=Math.sin(x),cy=Math.cos(y),sy=Math.sin(y);
-  const horizontal=[frame[0].map((v,i)=>cy*v+sy*frame[2][i]),frame[1],frame[2].map((v,i)=>-sy*frame[0][i]+cy*v)];
-  view.frame=[horizontal[0],horizontal[1].map((v,i)=>cx*v-sx*horizontal[2][i]),horizontal[2].map((v,i)=>sx*horizontal[1][i]+cx*v)];
+  if(button===2){if(n===3&&!cga)return;if(!cga||n===5)view.extra=clamp(view.extra-dy*.009,0,Math.PI);if(cga)view.conformal=clamp(view.conformal+dx*.009,0,HALF_PI);return;}
+  if(button===0){view.yaw-=dx*.008;view.pitch=clamp(view.pitch+dy*.007,-ELEVATION_LIMIT,ELEVATION_LIMIT);return;}
+  if(button!==1||!(n===4&&!cga||n===5&&cga))return;
+  // Express the display-axis drag in the fixed spatial coordinates. Upright
+  // orbit does not get baked into this independent SO(3) state.
+  const x=dy*.007,y=dx*.008,cx=Math.cos(x),sx=Math.sin(x),cy=Math.cos(y),sy=Math.sin(y),u=uprightFrame(view),ut=u[0].map((_,i)=>u.map(row=>row[i]));
+  const display=[[cy,0,sy],[sx*sy,cx,-sx*cy],[-cx*sy,sx,cx*cy]];
+  view.frame=multiply(multiply(multiply(ut,display),u),view.frame||identity());
 }
 export function screenPoint(p,view,n,cga,width,height,s){
   const centered=view.center?p.map((x,i)=>x-view.center[i]):p,v=toView(centered,view,n,cga),focal=10,factor=view.perspective===false?1:focal/Math.max(.5,focal-v[2]);

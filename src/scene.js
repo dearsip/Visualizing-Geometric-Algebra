@@ -1,5 +1,5 @@
 import { Algebra, add, sub, scale, dot, unit, length, basis, EPS } from './algebra.js';
-import { defaultView, toView, screenPoint, orbit, dragDelta, dragOnSurface, coordinateSpace, intersectCoordinates, restrictLinear } from './camera.js';
+import { defaultView, projectedSpace, screenPoint, orbit, dragDelta, dragOnSurface, coordinateSpace, intersectCoordinates, restrictLinear } from './camera.js';
 import { measureMath, drawMath } from './math-label.js';
 import { continuousFactors } from './frames.js';
 export const colors = { ink:'#284d3f', warm:'#e28a42', cool:'#67b4ca', a:'#315e4a', b:'#927044', c:'#8d5c79', result:'#278e87', purple:'#9b70af', mesh:'#84937d', green:'#549a6b', projective:'#ba8042', infinity:'#9265b4' };
@@ -25,7 +25,7 @@ export class Scene {
   activate(value=true){this.engaged=value;if(!value)this.up({});this.canvas.classList.toggle('interactive',value);this.onActivation?.(value);}
   resetView(){const perspective=this.view.perspective;this.view=defaultView(this.n,this.isCGA,this.section,this.flatGeometry);this.view.perspective=perspective;this.render();}
   project(p){return screenPoint(p,this.view,this.n,this.isCGA,this.w,this.h,this.s);}
-  toDisplay(p){return toView(p,{...this.view,frame:null,yaw:0,pitch:0,roll:0},this.n,this.isCGA);}
+  toDisplay(p){return projectedSpace(p,this.view,this.n,this.isCGA).point;}
   line(a,b,color=colors.ink,width=1,dash=false,alpha=1){this.commands.push({kind:'line',points:[a,b],color,width,dash,alpha});}
   poly(points,color=null,alpha=.16,dash=false){this.commands.push({kind:'poly',points,color,alpha,dash});}
   label(p,text,color=colors.ink,options={}){if(text)this.labels.push({p,text,color,...options});}
@@ -45,7 +45,7 @@ export class Scene {
     if(k===1){this.arrow(vectors[0],text,color||colors.ink,origin,dashed);return;}
     const solid=k>=3?`solid-${this.commands.length}`:null;
     const projected=vectors.map(v=>this.toDisplay(v)),det3=projected.length>=3?dot(projected[0],cross(projected[1],projected[2])):0;
-    const ambientColor=k===3?(det3<0?colors.cool:colors.warm):k===this.n&&k>=4?(new Algebra(this.n).blade(vectors).at(-1)<0?colors.cool:colors.warm):null;
+    const ambientColor=k===3?(det3< -1e-10?colors.cool:colors.warm):k===this.n&&k>=4?(new Algebra(this.n).blade(vectors).at(-1)<0?colors.cool:colors.warm):null;
     for(let i=0;i<k;i++)for(let j=i+1;j<k;j++){
       const rest=Array.from({length:k},(_,t)=>t).filter(t=>t!==i&&t!==j);
       for(let mask=0;mask<(1<<rest.length);mask++){
@@ -127,10 +127,10 @@ export class Scene {
     const w=this.n-2,u=this.n-1,m=this.n-2,point=x=>[...x,1,dot(x,x)/2],axes=Array.from({length:m},(_,i)=>i).filter(i=>!(section&&this.n===4&&i===1));
     // Only the construction diagram shows the cone; every later diagram uses its unit-origin section.
     if(section){
-      const t=1.8,axis=add(basis(this.n,w,1/Math.sqrt(2)),basis(this.n,u,1/Math.sqrt(2))),q=sub(basis(this.n,w,1/Math.sqrt(2)),basis(this.n,u,1/Math.sqrt(2))),frame=[basis(this.n,0),...(this.n===5?[basis(this.n,1)]:[]),q];
+      const axis=add(basis(this.n,w,1/Math.sqrt(2)),basis(this.n,u,1/Math.sqrt(2))),q=sub(basis(this.n,w,1/Math.sqrt(2)),basis(this.n,u,1/Math.sqrt(2))),frame=[basis(this.n,0),...(this.n===5?[basis(this.n,1)]:[]),q];
       const pairs=this.n===4?[[0,1]]:[[0,1],[1,2],[2,0]];
-      for(const [i,j] of pairs){let prev;for(let k=0;k<=64;k++){const phi=k*Math.PI/32,p=add(scale(axis,t),add(scale(frame[i],t*Math.cos(phi)),scale(frame[j],t*Math.sin(phi))));if(prev)this.line(prev,p,colors.green,1.1,true,.55);if(k%8===0)this.line(Z(this.n),scale(p,1.35),colors.green,.7,true,.4);prev=p;}}
-      this.label(add(scale(axis,t),scale(frame[0],t)),'Null Cone',colors.green,{dy:-18});
+      for(const t of [.45,.9,1.35,1.8])for(const [i,j] of pairs){let prev;for(let k=0;k<=64;k++){const phi=k*Math.PI/32,p=add(scale(axis,t),add(scale(frame[i],t*Math.cos(phi)),scale(frame[j],t*Math.sin(phi))));if(prev)this.line(prev,p,colors.green,1.1,true,.55);if(k%8===0)this.line(Z(this.n),scale(p,1.35),colors.green,.7,true,.4);prev=p;}}
+      this.label(add(scale(axis,1.8),scale(frame[0],1.8)),'Null Cone',colors.green,{dy:-18});
     }
     for(const axis of axes){let previous;for(let x=-2.3;x<=2.301;x+=.07){const v=Array(m).fill(0);v[axis]=x;const p=point(v);if(previous)this.line(previous,p,colors.purple,section?1.8:.95,false,.65);previous=p;}}
     if(!(section&&this.n===4))for(let fixed=-1.6;fixed<=1.6;fixed+=.8)for(let swap=0;swap<2;swap++){let prev;for(let x=-2;x<=2.001;x+=.12){const v=Array(m).fill(0);v[swap]=x;v[1-swap]=fixed;const p=point(v);if(prev)this.line(prev,p,colors.purple,.65,true,.3);prev=p;}}
@@ -182,8 +182,8 @@ export class Scene {
   pos(e){const r=this.canvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top};}
   down(e){
     if(e.pointerType==='touch'&&!this.engaged)return;
-    e.preventDefault();this.canvas.focus({preventScroll:true});this.activate();try{this.canvas.setPointerCapture(e.pointerId);}catch{}const p=this.pos(e);this.pointers.set(e.pointerId,p);
-    if(this.pointers.size>=2){this.gesture=this.pointers.size>=3?'three':'two';this.pair=this.pairState();this.gestureView={...this.view};this.drag=null;return;}
+    e.preventDefault();this.canvas.focus({preventScroll:true});this.activate();try{this.canvas.setPointerCapture(e.pointerId);}catch{}const p=this.pos(e),suspended=this.gesture==='suspended';this.pointers.set(e.pointerId,p);if(suspended)return;
+    if(this.pointers.size>=2){this.gesture=this.pointers.size>=3?'three':'two';this.pair=this.pairState();this.gestureLock=null;this.gestureMoved=new Set();this.gestureStarted=performance.now();this.gestureView={...this.view};this.drag=null;return;}
     const near=this.handles.map(h=>({...h,p:this.project(h.v)})).sort((a,b)=>Math.hypot(a.p.x-p.x,a.p.y-p.y)-Math.hypot(b.p.x-p.x,b.p.y-p.y))[0];
     const handle=e.button===0&&near&&Math.hypot(near.p.x-p.x,near.p.y-p.y)<(e.pointerType==='touch'?28:18)?near:null;
     this.gesture='one';this.drag={p,handle,button:e.button,shift:e.shiftKey};this.canvas.classList.add('dragging');
@@ -193,7 +193,7 @@ export class Scene {
   move(e){
     if(!this.pointers.has(e.pointerId))return;const p=this.pos(e);this.pointers.set(e.pointerId,p);
     if(this.gesture==='suspended')return;
-    if(this.pointers.size>=2){const next=this.pairState();if(this.pair){const v={...this.gestureView};orbit(v,this.n,this.isCGA,next.x-this.pair.x,next.y-this.pair.y,this.gesture==='three'?1:2);if(this.gesture==='three')this.view=v;else{this.view.extra=v.extra;this.view.conformal=v.conformal;if(this.pair.d>8)this.view.zoom=Math.max(.35,Math.min(3.5,this.gestureView.zoom*next.d/this.pair.d));}}this.render();return;}
+    if(this.pointers.size>=2){this.gestureMoved.add(e.pointerId);const next=this.pairState();if(this.pair){const dx=next.x-this.pair.x,dy=next.y-this.pair.y,pinch=Math.abs(next.d-this.pair.d),motion=Math.hypot(dx,dy);if(this.gesture==='three')this.gestureLock='orbit';else if(!this.gestureLock&&(this.gestureMoved.size>=2||performance.now()-this.gestureStarted>80)&&Math.max(motion,pinch)>10)this.gestureLock=pinch>motion*1.35?'zoom':'orbit';if(this.gestureLock==='orbit'){const v={...this.gestureView};orbit(v,this.n,this.isCGA,dx,dy,this.gesture==='three'?1:2);this.view=v;}else if(this.gestureLock==='zoom'&&this.pair.d>8)this.view.zoom=Math.max(.35,Math.min(3.5,this.gestureView.zoom*next.d/this.pair.d));}this.render();return;}
     if(!this.drag)return;const {handle,button}=this.drag,dx=p.x-this.drag.p.x,dy=p.y-this.drag.p.y;this.drag.p=p;
     if(handle){
       let space=handle.space||coordinateSpace(this.n);

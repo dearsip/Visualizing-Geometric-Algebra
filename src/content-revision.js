@@ -89,4 +89,12 @@ export function reviseContent(chapters,{V,E,I,S,R,L,GP,AGP}){
   for(let i=chapters.length-1;i>=0;i--)if(['cga-meet','cga-operations'].includes(chapters[i].id))chapters.splice(i,1);
   for(const c of chapters)if(c.group==='Exterior Algebra')c.eyebrow='Exterior Algebra';
   for(const c of chapters)c.group=['Exterior Algebra','Euclidean Geometric Algebra'].includes(c.group)?'Euclidean Geometric Algebra':c.group==='Round Geometry · CGA'?'Conformal Geometric Algebra':'Projective Geometric Algebra';
+  figure('dipole').ja+='原則として、grade 2以上のobjectはnull pointのwedge productで記述する。';
+  figure('dipole').en='A pair of points separated by twice the radius, corresponding to a point in flat geometry. Here, objects of grade 2 and above are normally specified as wedge products of null points. A factor at infinity makes the object flat.';
+  // Sentence case within prose; headings keep their typographic title case.
+  for(const f of chapters.flatMap(c=>c.figures))for(const lang of ['ja','en']){
+    f[lang]=f[lang].replace(/\b(Round [Pp]oint|Round [Oo]bject|Flat [Oo]bject|Norm|Imaginary|Antiscalar|Scalar|Reflection|Rotation|Null [Pp]oint|Null [Cc]one|Horosphere|Bulk|Weight|Vector|Bivector|Trivector|Object|Carrier|Cocarrier|Container|Radius|Dual|Antidual|Complement|Sandwich|Wedge [Pp]roduct|Geometric [Pp]roduct|Flat [Gg]eometry|Round [Gg]eometry|Projective [Aa]xis|Unit [Ww]eight|Unit [Ss]lice|Round [Pp]art|Flat [Pp]art|Round [Ww]eight|Round [Bb]ulk|Flat [Ww]eight|Flat [Bb]ulk)\b/g,x=>x.toLowerCase());
+    if(lang==='en')f[lang]=f[lang].replace(/(^|[.!?]\s+)([a-z])/g,(_,a,b)=>a+b.toUpperCase());
+  }
+
 }

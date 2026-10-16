@@ -27,3 +27,6 @@ body{font-size:16px}.brand{font-size:14px}.brand small{font-size:12px}.edition{f
 @media(max-width:900px){.figure-side{max-height:420px}}@media(max-width:500px){.figure-side{max-height:380px}}
 
 .workspace-bar{display:none}.radius-norm-symbol{display:inline-block;width:.8em;height:.8em;border:1px solid currentColor;border-radius:50%;position:relative;vertical-align:baseline}.radius-norm-symbol::after{content:"";position:absolute;width:50%;height:1px;background:currentColor;left:50%;top:50%;transform-origin:left;transform:rotate(-30deg)}
+
+@media (max-width: 800px) { #intro { margin-bottom: 28px; } }
+.supplement-dimensions { margin-bottom: 24px; }
