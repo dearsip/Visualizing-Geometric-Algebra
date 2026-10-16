@@ -1,5 +1,6 @@
+import {conformalFlow,conformalOrbit,drawConformalOrbit} from './conformal-flow.js';
 import {basis,add,sub,scale,dot,length,unit,EPS} from './algebra.js';
-import {embed,affine,cgaParts,cgaProperties,cgaRound,removeInfinity,spatialRound,alignmentGuides,reflectionPath,composeReflections,screwParameters} from './geometry.js';
+import {embed,affine,cgaParts,cgaProperties,cgaRound,removeInfinity,spatialRound,alignmentGuides,reflectionPath,composeReflections,screwGuide} from './geometry.js';
 import {colors} from './scene.js';
 import {V,E,GP,AGP} from './content.js';
 const check=(key,label,value=false)=>({type:'check',key,label,value});
@@ -35,7 +36,7 @@ export function configure(m){
   }
   if(t==='conformal-transform'){
     m.controls=[];m.state.objectGrade=1;m.state.count=2;m.vectors=[embed([-.7,.5,...(n===5?[.3]:[])],n)];
-    addControls(m,select('objectGrade','Object grade',Array.from({length:n-1},(_,i)=>[i+1,['Round point','Dipole','Circle','Sphere'][i]])),select('count','Reflection count',Array.from({length:6},(_,i)=>[i+1,String(i+1)]),2),select('preset','Preset',presetOptions,'translation'),check('mirrors','Inversion spheres / planes',true),check('mesh','Horosphere',true),check('homogeneous','Homogeneous blades'));
+    addControls(m,select('objectGrade','Object grade',Array.from({length:n-1},(_,i)=>[i+1,['Round point','Dipole','Circle','Sphere'][i]])),select('count','Reflection count',Array.from({length:6},(_,i)=>[i+1,String(i+1)]),2),select('preset','Preset',presetOptions,'translation'),check('mirrors','Inversion spheres / planes',true),check('mesh','Horosphere',true),check('homogeneous','Homogeneous blades'),check('trajectory','Trajectory',true),check('fixedLocus','Fixed points / circle',true));
     conformalPreset(m,'translation');
   }
 }
@@ -83,7 +84,7 @@ export function moved(m,i){if(['motor','conformal-transform'].includes(m.def.typ
 function conformalNames(m){m.names=[...['p₀','q₀','r₀','t₀'].slice(0,+m.state.objectGrade),...Array.from({length:+m.state.count},(_,i)=>String.fromCharCode(97+i))];}
 function conformalPreset(m,preset){
   const n=m.n,d=n-2,plane=(angle,offset=0)=>[Math.cos(angle),Math.sin(angle),...Array(d-2).fill(0),0,-offset],sphere=(c,r)=>embed([c,...Array(d-1).fill(0)],n,-r*r);
-  const mirrors=preset==='translation'?[plane(0,-.3),plane(0,.35)]:preset==='rotation'?[plane(0),plane(.55)]:preset==='inversion'?[sphere(0,1.3)]:preset==='dilation'?[sphere(0,1),sphere(0,1.5)]:preset==='elliptic'?[sphere(-.55,1.2),sphere(.55,1.2)]:preset==='hyperbolic'?[sphere(-1.1,.7),sphere(1.1,.7)]:preset==='parabolic'?[sphere(-1,1),sphere(1,1)]:[sphere(0,1),sphere(0,1.5),plane(0),plane(.5)];
+  const mirrors=preset==='translation'?[plane(0,-.3),plane(0,.35)]:preset==='rotation'?[plane(0),plane(.55)]:preset==='inversion'?[sphere(0,1.3)]:preset==='dilation'?[sphere(0,1),sphere(0,1.5)]:preset==='elliptic'?[sphere(-.55,1.2),sphere(.55,1.2)]:preset==='hyperbolic'?[sphere(-1.1,.7),sphere(1.1,.7)]:preset==='parabolic'?[sphere(-1,1),sphere(1,1)]:[sphere(0,1),sphere(0,1.12),plane(0),plane(.65)];
   m.vectors=[...m.vectors.slice(0,+m.state.objectGrade),...mirrors];m.state.count=mirrors.length;conformalNames(m);
 }
 function handles(m,scene,retract){m.vectors.forEach((v,i)=>{scene.handle(v,m.names[i],i,i<+m.state.objectGrade?colors.a:colors.purple,null,false,m.cga?Array.from({length:m.n},(_,j)=>basis(m.n,j)):null);if(retract&&i<+m.state.objectGrade)scene.handles.at(-1).retract=x=>embed(x.slice(0,m.n-2).map(v=>v/(x[m.n-2]||1)),m.n);});}
@@ -99,7 +100,7 @@ export function paint(m,scene,embeddedRound){
     const k=+s.objectGrade,planes=m.vectors.slice(k),source=m.vectors.slice(0,k),dim=n-1,time=s.time,output=source.map(p=>reflectionPath(planes,p,dim,time));handles(m,scene);
     const label=k===1?'v':k===2?'l':'g';scene.blade(source,label+'₀',{color:colors.a,alpha:.08});scene.blade(output,label+'(t)',{color:colors.result,alpha:.08});scene.flat(A.blade(source),A,label+'₀',colors.a);scene.flat(A.blade(output),A,label+'(t)',colors.result);
     let prev;for(let t=0;t<=1.001;t+=.025){const q=reflectionPath(planes,source[0],dim,t);if(prev)scene.line(prev,q,colors.result,1,true,.7);prev=q;}
-    if(n===4){const {axis,center,angle}=screwParameters(composeReflections(planes.length%2?planes.slice(1):planes,dim));if(length(axis)>EPS){const c=[...center,1],d=[...axis,0],radial=sub(source[0],c),u=unit(sub(radial,scale(d,dot(radial,d)))),v=[axis[1]*u[2]-axis[2]*u[1],axis[2]*u[0]-axis[0]*u[2],axis[0]*u[1]-axis[1]*u[0],0];scene.line(add(c,scale(d,-2)),add(c,scale(d,2)),colors.purple,1,true);scene.line(c,add(c,u),colors.purple,1,true);let p=add(c,u);for(let i=1;i<=32;i++){const a=angle*time*i/32,q=add(c,add(scale(u,Math.cos(a)),scale(v,Math.sin(a))));scene.line(p,q,colors.purple,1);p=q;}}}
+    if(n===4){const guide=screwGuide(composeReflections(planes.length%2?planes.slice(1):planes,dim),source[0],time);if(guide){const {axis,foot,arc,endpoint,angle}=guide;scene.line(add(foot,scale(axis,-2)),add(foot,scale(axis,2)),colors.purple,1,true);scene.line(arc[0],foot,colors.purple,1,true);Object.assign(scene.commands.at(-1),{screwRadius:true});if(angle>EPS)for(let i=1;i<arc.length;i++)scene.line(arc[i-1],arc[i],colors.purple,1);scene.line(arc.at(-1),endpoint,colors.purple,1.4,true);Object.assign(scene.commands.at(-1),{screwTranslation:true});}}
     let Q=A.volume();for(const plane of planes){const norm=length(plane.slice(0,dim));if(norm<EPS){m.status='Zero reflecting normal';return true;}const g=A.lc(A.vector(scale(plane,1/norm)));Q=A.agp(g,Q);if(s.planes)scene.flat(g,A,'',colors.mesh);}
     m.formula=`${V(planes.length%2?'F':'Q')} = ${V('gₘ')} ${AGP} ⋯ ${AGP} ${V('g₁')}`;m.row('Q',m.mv(Q));m.row(label+'(t)',m.mv(A.blade(output)));return true;
   }
@@ -109,6 +110,10 @@ export function paint(m,scene,embeddedRound){
     const displayOutput=output.map(v=>{const p=A.coordinates(v),w=p[n-2];return Math.abs(w)>EPS?scale(p,1/w):p;}),input=A.blade(source),out=output.reduce((r,v)=>A.wedge(r,v),A.scalar()),label=sym(k);spatialRound(scene,input,A,hat(label+'₀'),colors.a);embeddedRound(scene,input,A,label+'₀',colors.a);spatialRound(scene,out,A,hat(label+'₁'),colors.result);embeddedRound(scene,out,A,label+'₁',colors.result);
     if(s.homogeneous){scene.blade(source,label+'₀',{color:colors.a,alpha:.06});scene.blade(displayOutput,label+'₁',{color:colors.result,alpha:.06});}
     for(let i=0;i<k;i++){const q=displayOutput[i],w=q[n-2];scene.arrow(q,'',colors.result);if(Math.abs(w)>EPS)scene.line([...source[i].slice(0,n-1),0],[...q.slice(0,n-1),0],colors.mesh,1,true);}
+    const orbitKey=JSON.stringify([source[0],mirrors]);if(m.orbitCache?.key!==orbitKey){const flow=conformalFlow(A,mirrors);m.orbitCache={key:orbitKey,flow,samples:flow?conformalOrbit(flow,source[0]):null};}
+    const {flow,samples}=m.orbitCache;m.hasContinuousOrbit=!!flow;
+    if(flow&&s.trajectory)drawConformalOrbit(scene,samples,colors.result);
+    if(flow&&s.fixedLocus){if(flow.fixedBlade){spatialRound(scene,flow.fixedBlade,A,'',colors.warm);embeddedRound(scene,flow.fixedBlade,A,'',colors.warm);}for(const point of flow.fixedPoints){const w=point[n-2];if(Math.abs(w)>EPS){const p=scale(point,1/w);scene.point(p,'',colors.warm,5);if(Math.abs(p[n-1])>EPS)scene.point([...p.slice(0,n-1),0],'',colors.warm,5);}else scene.point(scale(point,1/(point[n-1]||length(point)||1)),'∞',colors.warm,5);}}
     m.formula=`${V(label+'₁')} = (−1)<sup>m·${k}</sup> ${V('aₘ')} ${GP} ⋯ ${GP} ${V('a₁')} ${GP} ${V(label+'₀')} ${GP} ${V('a₁')}<sup>−1</sup> ${GP} ⋯ ${GP} ${V('aₘ')}<sup>−1</sup>`;m.row(label+'₁',m.mv(out));return true;
   }
   // Component diagrams use coordinate projections of the original two factors.

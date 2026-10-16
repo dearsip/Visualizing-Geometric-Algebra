@@ -45,7 +45,7 @@ function renderControls(mount){
     const block=el('div','coord-editor');block.append(el('div','coord-label',`${model.names[i]||String.fromCharCode(97+i)} · coordinates`));const grid=el('div','coord-inputs');grid.style.gridTemplateColumns=`repeat(${model.n},minmax(0,1fr))`;
     v.forEach((value,j)=>{const label=el('label','',['x','y','z','w','u'][j]),input=el('input');input.type='number';input.step='.05';input.value=Number(value.toFixed(2));input.dataset.vector=i;input.dataset.coordinate=j;input.setAttribute('aria-label',`${model.names[i]} ${['x','y','z','w','u'][j]}`);
       if(model.cga&&!isFreeRoundPoint(model,i)&&!(model.def.type==='conformal-transform'&&i>=+model.state.objectGrade)&&j>=model.n-2){input.readOnly=true;input.title='Null point · dependent coordinate';}
-      if(model.def.type==='null'&&j===model.n-3){input.readOnly=true;input.title='Null-cone section';}
+      if(model.def.type==='null'&&j===1){input.readOnly=true;input.title='Null-cone section';}
       if(model.state.lockWeight&&!model.cga&&j===model.n-1){input.readOnly=true;input.title='Unit slice · fixed weight';}
       if(model.state.fix&&['geometric','projective-product'].includes(model.def.type))input.disabled=true;
       const edit=()=>{const val=input.valueAsNumber;if(!Number.isFinite(val))return;const next=[...model.vectors[i]];next[j]=Math.max(-6,Math.min(6,val));model.move(i,next);mount.scene.render();if(input!==document.activeElement)input.value=Number(model.vectors[i][j].toFixed(2));};input.addEventListener('input',edit);input.addEventListener('change',edit);label.append(input);grid.append(label);});block.append(grid);side.append(block);
@@ -57,6 +57,7 @@ function sync(mount){
   mount.result.replaceChildren();for(const {label,value} of model.rows){const heading=el('div','value-title');heading.innerHTML=labelHTML(label);mount.result.append(heading);const line=el('div','math');if(typeof value==='string'&&value.includes('<span'))line.innerHTML=value;else line.textContent=value??'—';mount.result.append(line);}
   if(model.status)mount.result.append(el('p','status',model.status));
   mount.side.querySelectorAll('[data-vector]').forEach(input=>{if(input!==document.activeElement)input.value=Number(model.vectors[+input.dataset.vector][+input.dataset.coordinate].toFixed(2));});
+  if(model.def.type==='conformal-transform')for(const input of mount.side.querySelectorAll('[data-control=trajectory],[data-control=fixedLocus]')){input.disabled=!model.hasContinuousOrbit;input.title=model.hasContinuousOrbit?'':'Available for two reflections or commuting reflection pairs';}
   const preset=mount.side.querySelector('[data-control=preset]');if(preset)preset.value=model.state.preset;
   const radius=mount.side.querySelector('[data-control=radius2]');if(radius&&radius!==document.activeElement)radius.value=model.state.radius2;
   if(radius){radius.disabled=Math.abs(model.vectors[0][model.n-2])<1e-9;radius.nextElementSibling.textContent=radius.disabled?'—':Number(model.state.radius2).toFixed(2);}
@@ -135,7 +136,7 @@ function render(){
 function setDimension(dim){dimension=dim;const url=new URL(location.href);url.searchParams.set('dim',dim);history.replaceState(null,'',url);for(const m of mounts)m.selectDimension(m.fixedDimension?4:dim);document.querySelectorAll('[data-dim]').forEach(b=>{const on=+b.dataset.dim===dim;b.classList.toggle('active',on);b.setAttribute('aria-pressed',String(on));});navigation();supplement();}
 document.querySelectorAll('[data-dim]').forEach(b=>b.addEventListener('click',()=>setDimension(+b.dataset.dim)));
 document.addEventListener('pointerdown',e=>{for(const m of mounts)if(e.target!==m.canvas&&!m.article.querySelector('.canvas-tools').contains(e.target))m.scene.activate(false);});
-function supplement(){const box=$('#supplement');box.innerHTML=supplementalHTML(chapter,dimension);if(!box.innerHTML)return;const controls=el('div','dimension-switch supplement-dimensions');controls.setAttribute('role','group');controls.setAttribute('aria-label','Supplement dimension');for(const dim of [3,4]){const b=el('button','',dimensionName(chapter.figures[0],dim));b.classList.toggle('active',dimension===dim);b.setAttribute('aria-pressed',String(dimension===dim));b.addEventListener('click',()=>setDimension(dim));controls.append(b);}box.prepend(controls);}
+function supplement(){const box=$('#supplement');box.innerHTML=supplementalHTML(chapter,dimension);if(!box.innerHTML)return;const controls=el('div','dimension-switch supplement-dimensions');controls.setAttribute('role','group');controls.setAttribute('aria-label','Supplement dimension');for(const dim of [3,4]){const b=el('button','',dimensionName(chapter.figures[0],dim));b.classList.toggle('active',dimension===dim);b.setAttribute('aria-pressed',String(dimension===dim));b.addEventListener('click',()=>setDimension(dim));controls.append(b);}const first=box.querySelector('.formula-block');if(first){const head=el('div','supplement-head'),title=first.querySelector('h3');if(title)head.append(title);head.append(controls);first.prepend(head);}}
 
 render();
 if(location.hash)requestAnimationFrame(()=>document.getElementById(location.hash.slice(1))?.scrollIntoView());

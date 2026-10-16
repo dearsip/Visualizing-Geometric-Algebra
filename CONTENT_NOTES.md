@@ -47,7 +47,7 @@ Projective Product / Antiproductを独立した図にし、SandwichとIsometry�
 
 ## Verification
 
-`npm test`: 175 checks. Clifford relation、basis associativity、Complement、Projection、CGA embedding、Motor / Flector、全図とcontrols、cameraの向きとfold端点、斜めlocusのdrag速度、連続frame、Attitude / Distance、Line分解、Parametric form、変位量による陰影、Round Pointの接平面と断面を検証する。
+`npm test`: 182 checks. Clifford relation、basis associativity、Complement、Projection、CGA embedding、Motor / Flector、全図とcontrols、cameraの向きとfold端点、斜めlocusのdrag速度、連続frame、Attitude / Distance、Line分解、Parametric form、変位量による陰影、Round Pointの接平面と断面を検証する。
 
 ブラウザでは全18ページの両次元版、1280pxと375pxの表示、横溢れと描画例外、共通の次元切替と編集値の保持、操作の有効化／解除を確認する。ローカルのgesture pageは40の入力試験を行う。実機スマホでの操作感は未確認。
 
@@ -60,3 +60,5 @@ Horosphereのドラッグは反復解が投影接線の特異点で止まった�
 Cameraは独立したspatial SO(3) / extra-axis exchange、追加軸とのfold、upright orbitの順で適用する。4D Euclideanでも中ドラッグ／3本指を使える。Null Cone図は同じ入力を受け、潰れた追加軸を初期e2方向へ展開して表示する。2本指は10pxの判定余白を超えた回転かpinchの一方に固定し、指が減ったら全て離すまで中断する。
 
 Round pointのmeetと変換結果はorigin係数を1に正規化して表示する。Normのcomponent bladeは元の入力factorを各成分の平面に直交射影した形を使う。Alignmentの補助線はradiusの絶対値で描く円／球の交点から中心へ引く。Imaginaryを含むright alignmentと実のpolar alignmentを区別する。
+
+Conformal Transformationsの軌跡は、2回の反転の合成に対する連続部分群を使う。Ellipticでは閉軌道と固定円／dipole、Hyperbolicでは2つのnull固定点を結ぶ円弧、Parabolicでは1つの固定点へ両側から近づく円を表示する。Loxodromic presetは同じ中心でのdilationとrotationの可換な合成とし、螺旋を表示する。軌道はorigin係数を1にしたHorosphere上の形とu=0の形の両方を描く。表示範囲の外や無限遠を跨ぐ区間は接続しない。3回以上の任意の非可換な反転合成の連続軌道は今回の対象に含めない。

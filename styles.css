@@ -30,3 +30,8 @@ body{font-size:16px}.brand{font-size:14px}.brand small{font-size:12px}.edition{f
 
 @media (max-width: 800px) { #intro { margin-bottom: 28px; } }
 .supplement-dimensions { margin-bottom: 24px; }
+
+.supplement-head { display:flex; align-items:flex-start; justify-content:space-between; gap:18px; flex-wrap:wrap; margin-bottom:16px; }
+.supplement-head h3 { margin:0; }
+.supplement-head .supplement-dimensions { margin:0 0 0 auto; flex-shrink:0; }
+@media(max-width:500px) { .supplement-head .supplement-dimensions { width:100%; margin-left:0; } }

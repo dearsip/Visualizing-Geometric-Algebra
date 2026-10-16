@@ -94,6 +94,15 @@ export function reflectionPath(planes,p,dim,t){
   return transformPoint(pre,screwInterpolate(composeReflections(planes.slice(1),dim),t),dim);
 }
 
+export function screwGuide(transform,point,t){
+  const {axis,center,angle}=screwParameters(transform),p=affine(point);
+  if(!p||length(axis)<EPS)return null;
+  const x=p.slice(0,3),foot=add(center,scale(axis,dot(sub(x,center),axis))),radial=sub(x,foot),tangent=cross(axis,radial);
+  const arc=Array.from({length:49},(_,i)=>[...add(foot,add(scale(radial,Math.cos(angle*t*i/48)),scale(tangent,Math.sin(angle*t*i/48)))),1]);
+  const endpoint=transformPoint(p,screwInterpolate(transform,t),3);
+  return {axis:[...axis,0],foot:[...foot,1],arc,endpoint,angle};
+}
+
 // Intersections of a round point's spatial sphere with its aligned container.
 // A circle gives two points; a sphere gives a representative antipodal pair.
 export function alignmentGuides(scene,point,object,A,color){

@@ -14,7 +14,7 @@ const fill=(m,spec)=>m.addControl(spec),number=x=>Number(x.toFixed(3));
 export const cgaTypes=['cga-dot','cga-join','cga-meet','cga-expansion','cga-property'];
 export function configure(m){
   const t=m.def.type,n=m.n;m.frames=new Map();
-  if(t==='null'){m.names=['q'];const x=m.vectors[0].slice(0,n-2);x[n-3]=0;m.vectors[0]=embed(x,n);}
+  if(t==='null'){m.names=['q'];const x=m.vectors[0].slice(0,n-2);x[1]=0;m.vectors[0]=embed(x,n);}
   if(t==='trivector'){m.controls=m.controls.filter(x=>!['fix','loci'].includes(x.key));delete m.state.fix;delete m.state.loci;}
   if(t==='antiwedge'||t==='geometric-antiproduct'){m.setVectors(2);m.names=t==='antiwedge'?['ā','b̄']:['ḡ','h̄'];if(t==='geometric-antiproduct'){m.controls=[];m.vectors=[[1.5,.3,...(n===4?[.4]:[]),1],[-.4,1.4,...(n===4?[.7]:[]),1]];fill(m,check('wedgeLocus','Wedge loci'));fill(m,check('dotLocus','Dot loci'));fill(m,check('antidotLoci','Antidot loci'));fill(m,check('complements','Complements',true));}}
   if(t==='complement')m.controls=m.controls.filter(x=>x.key!=='frame');
@@ -70,7 +70,7 @@ export function dragSpace(m,i){
   const n=m.n,t=m.def.type,h=n-1;
   if(m.state.fix&&['geometric','projective-product'].includes(t))return [];
   if(m.cga&&t==='conformal-transform'&&i>=+m.state.objectGrade)return Array.from({length:n},(_,j)=>basis(n,j));
-  if(m.cga&&t!=='roundpoint')return Array.from({length:n},(_,j)=>j).filter(j=>t!=='null'||j!==n-3).map(j=>basis(n,j));
+  if(m.cga&&t!=='roundpoint')return Array.from({length:n},(_,j)=>j).filter(j=>t!=='null'||j!==1).map(j=>basis(n,j));
   let frame=Array.from({length:n},(_,j)=>basis(n,j));
   if(m.state.fix){if(t==='wedge')frame=[unit(m.vectors[1-i])];
     if(['dot','euclidean-dot','projective-product'].includes(t)){const normal=[...m.vectors[1-i]];if(t!=='euclidean-dot')normal[h]=0;frame=perpendicularFrame(normal);}

@@ -97,4 +97,7 @@ export function reviseContent(chapters,{V,E,I,S,R,L,GP,AGP}){
     if(lang==='en')f[lang]=f[lang].replace(/(^|[.!?]\s+)([a-z])/g,(_,a,b)=>a+b.toUpperCase());
   }
 
+  figure('conformal-transform').ja+=' 軌跡は最初のnull pointを追う。';
+  figure('conformal-transform').en+=' The trajectory follows the first null point.';
+
 }

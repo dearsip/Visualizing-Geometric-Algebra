@@ -70,6 +70,7 @@ export class Scene {
   axes(){
     const names=['x · e₁','y · e₂','z · e₃','w · e₄','u · e₅'];
     for(let i=0;i<this.n;i++){
+      if(this.isCGA&&this.view.section&&i===1)continue;
       const b=basis(this.n,i,2.6),p=this.project(b),o=this.project(Z(this.n));
       const visible=Math.hypot(p.x-o.x,p.y-o.y)>14;
       const color=i===(this.isCGA?this.n-2:3)?colors.projective:this.isCGA&&i===this.n-1?colors.infinity:colors.mesh;
@@ -124,16 +125,16 @@ export class Scene {
   }
   orthonormal(vs){const r=[];for(let v of vs){v=[...v];for(const u of r)v=sub(v,scale(u,dot(u,v)));if(length(v)>EPS)r.push(unit(v));}return r;}
   cgaMesh(section=false){
-    const w=this.n-2,u=this.n-1,m=this.n-2,point=x=>[...x,1,dot(x,x)/2],axes=Array.from({length:m},(_,i)=>i).filter(i=>!(section&&this.n===4&&i===1));
+    const w=this.n-2,u=this.n-1,m=this.n-2,point=x=>[...x,1,dot(x,x)/2],axes=Array.from({length:m},(_,i)=>i).filter(i=>!(section&&i===1));
     // Only the construction diagram shows the cone; every later diagram uses its unit-origin section.
     if(section){
-      const axis=add(basis(this.n,w,1/Math.sqrt(2)),basis(this.n,u,1/Math.sqrt(2))),q=sub(basis(this.n,w,1/Math.sqrt(2)),basis(this.n,u,1/Math.sqrt(2))),frame=[basis(this.n,0),...(this.n===5?[basis(this.n,1)]:[]),q];
+      const axis=add(basis(this.n,w,1/Math.sqrt(2)),basis(this.n,u,1/Math.sqrt(2))),q=sub(basis(this.n,w,1/Math.sqrt(2)),basis(this.n,u,1/Math.sqrt(2))),frame=[basis(this.n,0),...(this.n===5?[basis(this.n,2)]:[]),q];
       const pairs=this.n===4?[[0,1]]:[[0,1],[1,2],[2,0]];
       for(const t of [.45,.9,1.35,1.8])for(const [i,j] of pairs){let prev;for(let k=0;k<=64;k++){const phi=k*Math.PI/32,p=add(scale(axis,t),add(scale(frame[i],t*Math.cos(phi)),scale(frame[j],t*Math.sin(phi))));if(prev)this.line(prev,p,colors.green,1.1,true,.55);if(k%8===0)this.line(Z(this.n),scale(p,1.35),colors.green,.7,true,.4);prev=p;}}
       this.label(add(scale(axis,1.8),scale(frame[0],1.8)),'Null Cone',colors.green,{dy:-18});
     }
     for(const axis of axes){let previous;for(let x=-2.3;x<=2.301;x+=.07){const v=Array(m).fill(0);v[axis]=x;const p=point(v);if(previous)this.line(previous,p,colors.purple,section?1.8:.95,false,.65);previous=p;}}
-    if(!(section&&this.n===4))for(let fixed=-1.6;fixed<=1.6;fixed+=.8)for(let swap=0;swap<2;swap++){let prev;for(let x=-2;x<=2.001;x+=.12){const v=Array(m).fill(0);v[swap]=x;v[1-swap]=fixed;const p=point(v);if(prev)this.line(prev,p,colors.purple,.65,true,.3);prev=p;}}
+    if(!(section&&this.n===4))for(let fixed=-1.6;fixed<=1.6;fixed+=.8)for(let swap=0;swap<2;swap++){let prev;for(let x=-2;x<=2.001;x+=.12){const v=Array(m).fill(0);v[axes[swap]]=x;v[axes[1-swap]]=fixed;const p=point(v);if(prev)this.line(prev,p,colors.purple,.65,true,.3);prev=p;}}
     const center=basis(this.n,w);if(section)this.disk(center,[basis(this.n,0),basis(this.n,u)],2.7,'#c3af52',.025,true);else if(this.n===4)this.disk(center,[basis(this.n,0),basis(this.n,1)],2.7,'#c3af52',.025,true);else this.sphere(center,2.7,'#c3af52',true,.3,null,{mesh:true});
     if(section)this.label(point([-1.5,...Array(m-1).fill(0)]),'Horosphere',colors.purple,{dy:-18});
   }

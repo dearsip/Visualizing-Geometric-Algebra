@@ -20,8 +20,8 @@ export function projectedSpace(p,view,n,cga=false){
     const alpha=view.extra??HALF_PI,up=spatial[2],point=[spatial[0],spatial[1],up*Math.cos(alpha)+vertical*Math.sin(alpha)];
     // The construction section unfolds the otherwise hidden extra direction into
     // the initial spatial e2 direction. It never modifies the gesture state.
-    if(view.section)point[1]+=collapsed;
-    return {point,depth:vertical*Math.cos(alpha)-up*Math.sin(alpha)+(view.section?0:collapsed)};
+    if(view.section)point[1]=collapsed;
+    return {point,depth:vertical*Math.cos(alpha)-up*Math.sin(alpha)+(view.section?-spatial[1]:collapsed)};
   }
   if(n===4){const alpha=view.extra||0,up=spatial[2];return {point:[spatial[0],spatial[1],up*Math.cos(alpha)+p[3]*Math.sin(alpha)],depth:p[3]*Math.cos(alpha)-up*Math.sin(alpha)};}
   return {point:spatial,depth:0};
