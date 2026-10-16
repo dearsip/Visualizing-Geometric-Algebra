@@ -96,8 +96,4 @@ export function reviseContent(chapters,{V,E,I,S,R,L,GP,AGP}){
     f[lang]=f[lang].replace(/\b(Round [Pp]oint|Round [Oo]bject|Flat [Oo]bject|Norm|Imaginary|Antiscalar|Scalar|Reflection|Rotation|Null [Pp]oint|Null [Cc]one|Horosphere|Bulk|Weight|Vector|Bivector|Trivector|Object|Carrier|Cocarrier|Container|Radius|Dual|Antidual|Complement|Sandwich|Wedge [Pp]roduct|Geometric [Pp]roduct|Flat [Gg]eometry|Round [Gg]eometry|Projective [Aa]xis|Unit [Ww]eight|Unit [Ss]lice|Round [Pp]art|Flat [Pp]art|Round [Ww]eight|Round [Bb]ulk|Flat [Ww]eight|Flat [Bb]ulk)\b/g,x=>x.toLowerCase());
     if(lang==='en')f[lang]=f[lang].replace(/(^|[.!?]\s+)([a-z])/g,(_,a,b)=>a+b.toUpperCase());
   }
-
-  figure('conformal-transform').ja+=' 軌跡は最初のnull pointを追う。';
-  figure('conformal-transform').en+=' The trajectory follows the first null point.';
-
 }

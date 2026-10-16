@@ -60,9 +60,9 @@ export function drawConformalOrbit(scene,samples,color){
     const w=point[n-2],p=Math.abs(w)>1e-8?scale(point,1/w):null;
     if(!p||!p.every(Number.isFinite)||length(p.slice(0,n-2))>4.2||Math.abs(p[n-1])>9){previous=null;continue;}
     if(previous&&previous.w*w>0&&length(sub(previous.p,p))>1e-7){
-      scene.line(hat(previous.p),hat(p),color,1.7,false,.9);
+      scene.line(hat(previous.p),hat(p),color,.8,false,.9);
       Object.assign(scene.commands.at(-1),{trajectory:'spatial'});
-      scene.line(previous.p,p,color,1.1,true,.65);
+      scene.line(previous.p,p,color,.65,true,.65);
       Object.assign(scene.commands.at(-1),{trajectory:'embedded'});
       if(++arrows%65===0){scene.commands.at(-2).kind='arrow';}
     }

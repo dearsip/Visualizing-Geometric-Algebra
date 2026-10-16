@@ -4,7 +4,7 @@ const root = path.resolve(import.meta.dirname, '..');
 const dist = path.join(root, 'dist');
 await mkdir(dist, { recursive: true });
 // Deliberate allowlist: local book scans can never enter a deployment artifact.
-for (const name of ['index.html', 'styles.css', 'src', 'assets']) {
+for (const name of ['index.html', 'styles.css', 'src', 'assets', 'LICENSE', 'THIRD_PARTY_NOTICES.md']) {
   await cp(path.join(root, name), path.join(dist, name), { recursive: true });
 }
 await writeFile(path.join(dist, '.nojekyll'), '');
@@ -20,7 +20,7 @@ async function audit(dir) {
   for (const f of await readdir(dir, { withFileTypes: true })) {
     const p = path.join(dir, f.name);
     if (f.isDirectory()) await audit(p);
-    else if (!/\.(html|css|js|woff2|svg)$/.test(f.name) && !['.nojekyll','OFL.txt','FONTLOG.txt'].includes(f.name)) {
+    else if (!/\.(html|css|js|woff2|svg)$/.test(f.name) && !['.nojekyll','OFL.txt','FONTLOG.txt','LICENSE','THIRD_PARTY_NOTICES.md'].includes(f.name)) {
       throw new Error(`Unexpected public file: ${p}. Clear dist before rebuilding.`);
     }
   }

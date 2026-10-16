@@ -11,7 +11,7 @@ const server = http.createServer(async (req, res) => {
     let file = path.resolve(root, '.' + name);
     if (file !== root && !file.startsWith(root + path.sep)) throw new Error('Invalid path');
     if ((await stat(file)).isDirectory()) file = path.join(file, 'index.html');
-    const type = mime[path.extname(file)];
+    const type = mime[path.extname(file)] || (['LICENSE','THIRD_PARTY_NOTICES.md','OFL.txt','FONTLOG.txt'].includes(path.basename(file)) ? 'text/plain; charset=utf-8' : null);
     if (!type && path.basename(file) !== '.nojekyll') throw new Error('Non-public file');
     res.writeHead(200, { 'Content-Type': type || 'text/plain', 'Cache-Control': 'no-cache' });
     res.end(await readFile(file));

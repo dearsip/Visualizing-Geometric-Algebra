@@ -1,59 +1,39 @@
-# Geometric Algebra · Visual Atlas
+*Created with ChatGPT (Codex).*
 
-`Projective Geometric Algebra Illuminated` (Eric Lengyel) を参照して制作した、動かせる図の試作です。原著の図や本文を転載したサイトではありません。学習を補助する用途を想定し、トップに定義の変更・簡略化と、このサイトだけでの学習を想定しないことを明記しています。
+# Visualizing Geometric Algebra
 
-18の内容ページ、49種類の図を用意しています。各図のそばの次元切替は、ページ内で共通の状態を操作します。RGAは「2D Flat · 3D algebra / 3D Flat · 4D algebra」、CGAは「2D Round · 4D algebra / 3D Round · 5D algebra」と表記します。PlaneとSphereの単独図は、それぞれ存在する次元だけを表示します。
+Interactive diagrams for Euclidean, projective, and conformal geometric algebra. Move vectors and geometric objects to explore products, complements, incidence, measurements, projections, and transformations in 3D–5D algebra.
 
-## Local preview
-
-Node.js 22以降。外部npm依存はありません。
-
-```powershell
-npm test
-npm run build
-npm run dev
-```
-
-ブラウザで `http://127.0.0.1:4173/` を開きます。サーバーの配信対象は `dist/` のみです。ルートに置かれた参照資料にはアクセスできません。既定の待受は`0.0.0.0:4173`で、起動ログに表示されるNetwork URLを同じLANのスマホから開けます。`HOST=127.0.0.1`を指定するとPC内だけの配信になります。
+A visual companion to *Projective Geometric Algebra Illuminated* by Eric Lengyel, with some adapted definitions and simplifications. Use alongside the book. Mathematical terminology is in English, with Japanese and English captions.
 
 ## Controls
 
-- 背景を左ドラッグ: 掴んだ側がマウスに追従するOrbit。3Dはe₃を上に保ち、仰角は±90°の直前まで。4D Euclidean / 3D Flat / 3D Roundもupright orbit。中ドラッグ／3本指ドラッグではe₁e₂e₃の間で自由回転します。
-- 右ドラッグ上下: 点の上を含め、現在の上方向と追加軸の緯度を0–180°で変えます。3Dでは右ドラッグは動作しません。
-- CGAで右ドラッグ左右: origin axisとPoint at infinityの軸を滑らかに交換。
-- vectorの先端をドラッグ: 表示の視線に垂直な面内で移動。
-- 先端をShift + 左ドラッグ: e₁e₂平面。
-- 数値欄: 隠れている次元を含む成分の編集。
-- Fix value: Wedge / DotではConstant-product locusへ制約。Geometric Productでは両入力を固定。
-- 図をクリック／タップするとWheel / Pinchを有効化。Escか図の外で解除。非アクティブな図はページスクロールを妨げません。
-- タッチは1本指が左ドラッグ、2本指は中心の移動による右ドラッグかPinchの一方に判定後固定。3本指は自由回転。複数指から指が減った時は、全て離すまで操作を中断します。
-- Complementの点線の先端: 直交factorの姿勢を調整。Scaleはfactorに均等配分します。
-- Perspective / Orthographic: 高次元から3Dへの線形射影の後に適用するカメラ投影。既定はOrthographic。Home / View ↺で初期視点。
-- 操作説明の開閉状態は図・ページ間で共通です。右側の操作欄は独立スクロールします。
-- PNG: 現在の図と式を画像として保存。
+| Input | Action |
+| --- | --- |
+| Left drag / one finger on the background | Upright orbit. |
+| Middle drag / three fingers | Free spatial orbit in 4D Euclidean, 3D Flat, and 3D Round diagrams. |
+| Right drag vertically / two-finger swipe | Fold spatial up into the extra axis, where applicable (0–180°). |
+| Right drag horizontally / two-finger swipe | In conformal diagrams, exchange the origin and infinity axes (0–90°). |
+| Drag a vector tip | Move in the view plane. |
+| Shift + tip drag | Constrain movement to the e₁e₂ plane. |
+| Wheel / pinch | Zoom after clicking or tapping the diagram. Esc or a tap outside releases it. |
+| Coordinate fields | Edit components, including hidden dimensions. |
+| Home / View ↺ | Reset the camera. |
+| Reset | Restore the diagram's inputs and options. |
+| PNG | Export the current diagram and equation. |
 
-## Reference material stays local
+Two-finger gestures lock to either swiping or pinching until release. After a multi-finger gesture loses a finger, lift all fingers before starting again.
 
-`.gitignore` はPDF、Kindle形式、`tmp/`、`reference/`、`references/private/`、`.private/`を除外しています。PDFからの検討用キャプチャは `tmp/pdfs/` に保存します。
+Dimension selectors share one state across the page. Use the display toggles to show auxiliary geometry, and **Fix value** to constrain inputs. **Orthographic** is the default camera projection; **Perspective** is also available. Operation guides can be expanded below each diagram.
 
-`scripts/build.mjs` は `index.html`, `styles.css`, `src/`, `assets/` だけをコピーし、章のHTMLを生成します。成果物にPDF、書籍キャプチャ、その他想定外の形式が残っていればビルドを失敗させます。STIX Two MathとそのOFLライセンスを同梱し、Unicodeの積の記号を表示します。閲覧時のCDNアクセスはありません。
+The coordinate convention is e₁ right, e₂ forward, and e₃ up.
 
-ローカルサーバーだけに `/__qa__/gestures.html` を用意しています。Run input checksで実際のCanvasのイベントリスナーを検証できます。このページは公開成果物に含めません。
+## References
 
-新しい参照資料は上記の非公開用フォルダに置いてください。参照資料をGit管理に追加する必要はありません。
+- Eric Lengyel, [*Projective Geometric Algebra Illuminated*](https://projectivegeometricalgebra.org/).
+- [Rigid Geometric Algebra Wiki](https://rigidgeometricalgebra.org/).
+- [Conformal Geometric Algebra Wiki](https://conformalgeometricalgebra.org/).
 
-## GitHub Pages
+## License
 
-公開先は `dearsip/Visualizing-Geometric-Algebra`。現在のPrivate設定を変更する操作は行いません。
-
-`.github/workflows/pages.yml` は `main` へのpushで数値検証、静的ビルド、Pages deploymentを実行します。GitHubの **Settings → Pages → Build and deployment → Source: GitHub Actions** を選択してください。PrivateリポジトリでのPages利用はGitHubのプランに依存します。Publicへ変更する予定の場合は、変更後にPagesを有効にしてworkflowを再実行できます。
-
-サイトはサブディレクトリで動く相対パスだけを使っています。URLはPagesが有効になった後に `https://dearsip.github.io/Visualizing-Geometric-Algebra/` となります。ソースのpushと、サイトの公開成功は別に確認してください。
-
-## Content and remaining work
-
-実装範囲・原著との違い・未実装項目は [CONTENT_NOTES.md](CONTENT_NOTES.md) を参照してください。計算と描画を分離しているので、将来VRChatで同じ演算例・数値検証を使える構成です。
-
-一次資料: [Author's website](https://projectivegeometricalgebra.org/), [RGA Wiki](https://rigidgeometricalgebra.org/), [CGA Wiki](https://conformalgeometricalgebra.org/)。
-
-Flat Geometryはunit sliceへの制約を既定で有効にし、視点の中心をprojective axisの0.5倍に置きます。CGAの通常表示とNull Coneの断面表示は別の軸配置を使います。
+Original project code, text, and diagrams are dedicated to the public domain under [CC0 1.0 Universal](LICENSE). The bundled STIX Two Math font retains its [SIL Open Font License 1.1](assets/fonts/OFL.txt). See [Third-party notices](THIRD_PARTY_NOTICES.md) for the scope and exceptions.
