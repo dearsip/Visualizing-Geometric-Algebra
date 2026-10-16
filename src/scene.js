@@ -14,7 +14,7 @@ export class Scene {
     this.resize = new ResizeObserver(() => this.render()); this.resize.observe(canvas);
     this.listeners = []; this.pointers = new Map();
     const on = (event, f, opts) => { canvas.addEventListener(event,f,opts); this.listeners.push([event,f,opts]); };
-    on('contextmenu',e=>e.preventDefault());
+    on('contextmenu',e=>e.preventDefault());on('auxclick',e=>{if(e.button===1)e.preventDefault();});
     on('wheel',e=>{if(!this.engaged)return;e.preventDefault();this.view.zoom=Math.max(.35,Math.min(3.5,this.view.zoom*Math.exp(-e.deltaY*.001)));this.render();},{passive:false});
     on('click',()=>this.activate());on('blur',()=>this.activate(false));
     on('pointerdown',e=>this.down(e)); on('pointermove',e=>this.move(e));
@@ -23,7 +23,7 @@ export class Scene {
   }
   dispose(){this.resize.disconnect();for(const [e,f,o] of this.listeners)this.canvas.removeEventListener(e,f,o);}
   activate(value=true){this.engaged=value;if(!value)this.up({});this.canvas.classList.toggle('interactive',value);this.onActivation?.(value);}
-  resetView(){const perspective=this.view.perspective,orbitMode=this.view.orbitMode;this.view=defaultView(this.n,this.isCGA,this.section,this.flatGeometry,orbitMode);this.view.perspective=perspective;this.view.orbitMode=orbitMode;this.render();}
+  resetView(){const perspective=this.view.perspective;this.view=defaultView(this.n,this.isCGA,this.section,this.flatGeometry);this.view.perspective=perspective;this.render();}
   project(p){return screenPoint(p,this.view,this.n,this.isCGA,this.w,this.h,this.s);}
   toDisplay(p){return toView(p,{...this.view,frame:null,yaw:0,pitch:0,roll:0},this.n,this.isCGA);}
   line(a,b,color=colors.ink,width=1,dash=false,alpha=1){this.commands.push({kind:'line',points:[a,b],color,width,dash,alpha});}
@@ -183,17 +183,17 @@ export class Scene {
   down(e){
     if(e.pointerType==='touch'&&!this.engaged)return;
     e.preventDefault();this.canvas.focus({preventScroll:true});this.activate();try{this.canvas.setPointerCapture(e.pointerId);}catch{}const p=this.pos(e);this.pointers.set(e.pointerId,p);
-    if(this.pointers.size>=2){this.gesture='two';this.pair=this.pairState();this.gestureView={...this.view};this.drag=null;return;}
+    if(this.pointers.size>=2){this.gesture=this.pointers.size>=3?'three':'two';this.pair=this.pairState();this.gestureView={...this.view};this.drag=null;return;}
     const near=this.handles.map(h=>({...h,p:this.project(h.v)})).sort((a,b)=>Math.hypot(a.p.x-p.x,a.p.y-p.y)-Math.hypot(b.p.x-p.x,b.p.y-p.y))[0];
-    const handle=e.button!==2&&near&&Math.hypot(near.p.x-p.x,near.p.y-p.y)<(e.pointerType==='touch'?28:18)?near:null;
+    const handle=e.button===0&&near&&Math.hypot(near.p.x-p.x,near.p.y-p.y)<(e.pointerType==='touch'?28:18)?near:null;
     this.gesture='one';this.drag={p,handle,button:e.button,shift:e.shiftKey};this.canvas.classList.add('dragging');
   }
-  pairState(){const [a,b]=[...this.pointers.values()];return {x:(a.x+b.x)/2,y:(a.y+b.y)/2,d:Math.hypot(a.x-b.x,a.y-b.y)};}
+  pairState(){const points=[...this.pointers.values()],[a,b]=points;return {x:points.reduce((s,p)=>s+p.x,0)/points.length,y:points.reduce((s,p)=>s+p.y,0)/points.length,d:points.length===2?Math.hypot(a.x-b.x,a.y-b.y):0};}
   up(e){if(e.pointerId!==undefined)this.pointers.delete(e.pointerId);else this.pointers.clear();this.drag=null;this.pair=null;this.gesture=this.pointers.size?'suspended':null;this.canvas.classList.remove('dragging');}
   move(e){
     if(!this.pointers.has(e.pointerId))return;const p=this.pos(e);this.pointers.set(e.pointerId,p);
     if(this.gesture==='suspended')return;
-    if(this.pointers.size>=2){const next=this.pairState();if(this.pair){const v={...this.gestureView};orbit(v,this.n,this.isCGA,next.x-this.pair.x,next.y-this.pair.y,2);this.view.extra=v.extra;this.view.conformal=v.conformal;if(this.pair.d>8)this.view.zoom=Math.max(.35,Math.min(3.5,this.gestureView.zoom*next.d/this.pair.d));}this.render();return;}
+    if(this.pointers.size>=2){const next=this.pairState();if(this.pair){const v={...this.gestureView};orbit(v,this.n,this.isCGA,next.x-this.pair.x,next.y-this.pair.y,this.gesture==='three'?1:2);if(this.gesture==='three')this.view=v;else{this.view.extra=v.extra;this.view.conformal=v.conformal;if(this.pair.d>8)this.view.zoom=Math.max(.35,Math.min(3.5,this.gestureView.zoom*next.d/this.pair.d));}}this.render();return;}
     if(!this.drag)return;const {handle,button}=this.drag,dx=p.x-this.drag.p.x,dy=p.y-this.drag.p.y;this.drag.p=p;
     if(handle){
       let space=handle.space||coordinateSpace(this.n);

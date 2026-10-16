@@ -54,3 +54,10 @@ This is a development record, excluded from the public site.
 - [x] Norms before related objects; independent component/norm toggles, coordinate-projected factors, flat toggle, component/norm definitions and vector radius-norm symbol.
 - [x] Non-null round-point-only joins, finite point-valued meet examples, first-object-flat expansion, editable conformal reflection spheres and presets with higher-grade targets.
 - [x] 156 numerical/geometry checks and 24 browser input checks.
+
+## Middle-button / three-finger orbit
+
+- [x] Upright left orbit and independent middle / three-finger free orbit coexist in 3D Flat / 3D Round; no selector or reset. Right fold uses the current spatial up direction.
+- [x] Middle drag never selects handles; three-finger centroid never changes pinch zoom; three-to-two and three-to-one transitions suspend until release.
+- [x] LAN server listens on 0.0.0.0, advertises LAN addresses, serves dist only, and returns 404 for reference material.
+- [x] 163 numerical checks and 32 browser input checks.

@@ -47,9 +47,9 @@ Projective Product / Antiproductを独立した図にし、SandwichとIsometry�
 
 ## Verification
 
-`npm test`: 156 checks. Clifford relation、basis associativity、Complement、Projection、CGA embedding、Motor / Flector、全図とcontrols、cameraの向きとfold端点、斜めlocusのdrag速度、連続frame、Attitude / Distance、Line分解、Parametric form、変位量による陰影、Round Pointの接平面と断面を検証する。
+`npm test`: 163 checks. Clifford relation、basis associativity、Complement、Projection、CGA embedding、Motor / Flector、全図とcontrols、cameraの向きとfold端点、斜めlocusのdrag速度、連続frame、Attitude / Distance、Line分解、Parametric form、変位量による陰影、Round Pointの接平面と断面を検証する。
 
-ブラウザでは全18ページの両次元版、1280pxと375pxの表示、横溢れと描画例外、共通の次元切替と編集値の保持、操作の有効化／解除を確認する。ローカルのgesture pageは24の入力試験を行う。実機スマホでの操作感は未確認。
+ブラウザでは全18ページの両次元版、1280pxと375pxの表示、横溢れと描画例外、共通の次元切替と編集値の保持、操作の有効化／解除を確認する。ローカルのgesture pageは32の入力試験を行う。実機スマホでの操作感は未確認。
 
 CGAのNull pointのドラッグは、投影された移動先を反復的に解き、origin coefficientを1に戻してnull条件を保つ。右ドラッグは点を捕捉せず回転に専用する。
 

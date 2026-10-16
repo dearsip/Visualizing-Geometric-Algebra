@@ -71,7 +71,8 @@ function dimensionName(def,dim){
 }
 function interactionGuide(model){
   const cga=model.cga,extra=model.n>3,fold=extra&&(!cga||model.n===5);
-  return '<b>Left drag / 左ドラッグ · 1 finger / 1本指</b> Rotate / 回転'+(!cga&&extra?' — free spatial rotation / 自由回転':cga&&model.n===5?' — Upright / Free orbit selector / 回転方式を選択':' — upright vertical axis / 縦軸を上に保つ')+
+  return '<b>Left drag / 左ドラッグ · 1 finger / 1本指</b> Rotate / 回転'+((model.alg.kind==='rigid'&&model.n===4)||(cga&&model.n===5)?' — upright orbit / 縦軸を保つ回転':!cga&&extra?' — free spatial rotation / 自由回転':' — upright vertical axis / 縦軸を上に保つ')+
+    (((model.alg.kind==='rigid'&&model.n===4)||(cga&&model.n===5))?'<br><b>Middle drag / 中ドラッグ · 3 fingers / 3本指</b> Free orbit / 自由回転（e₁・e₂・e₃）':'')+
     (fold?'<br><b>Right ↑↓ / 右ドラッグ上下 · 2 fingers / 2本指</b> Extra-axis latitude / 追加軸の緯度（0–180°）':'')+
     (cga?'<br><b>Right ←→ / 右ドラッグ左右 · 2 fingers / 2本指</b> Exchange origin / infinity axes / 追加の2軸を切替（0–90°）':'')+
     '<br><b>Tip drag / 先端を左ドラッグ</b> Move / 移動　<b>Shift + left / Shift + 左ドラッグ</b> xy plane / xy平面'+
@@ -90,10 +91,9 @@ function mountFigure(def,i){
   canvas.setAttribute('aria-label',def.title+': drag vector tips, use the coordinate inputs, or press Home to reset the view.');canvas.setAttribute('role','img');
   canvas.textContent='Interactive diagram. Coordinates and values are available alongside the canvas.';
   const guide=el('details','canvas-guide'),guideTitle=el('summary','','Controls / 操作説明'),guideBody=el('div');guide.open=guideOpen;guide.append(guideTitle,guideBody);guide.addEventListener('toggle',()=>{if(guide.open===guideOpen)return;guideOpen=guide.open;localStorage.setItem('atlas-guide-open',String(guideOpen));document.querySelectorAll('.canvas-guide').forEach(g=>g.open=guideOpen);});wrap.append(canvas,guide);
-  const orbitMode=el('select');orbitMode.innerHTML='<option value="upright">Upright orbit</option><option value="free">Free orbit</option>';orbitMode.setAttribute('aria-label',def.title+' orbit mode');
   const toolbar=el('div','canvas-tools'),viewButton=el('button','','View ↺'),reset=el('button','','Reset'),projection=el('select'),exportButton=el('button','','PNG');
   projection.setAttribute('aria-label',def.title+' camera projection');projection.innerHTML='<option value="perspective">Perspective</option><option value="orthographic">Orthographic</option>';
-  toolbar.append(projection,orbitMode,viewButton,reset,exportButton);wrap.append(toolbar);
+  toolbar.append(projection,viewButton,reset,exportButton);wrap.append(toolbar);
   const side=el('div','figure-side');body.append(wrap,side);article.append(body);
   const caption=el('div','figure-caption');caption.innerHTML=`${def.ja}<br><span class="en">${def.en}</span><p class="reference">${def.ref}</p>`;
   article.append(caption);$('#figures').append(article);
@@ -106,14 +106,13 @@ function mountFigure(def,i){
     mount.scene=new Scene(canvas,model.n,scene=>{model.paint(scene);sync(mount);},(j,next)=>model.move(j,next));
     mount.scene.isCGA=model.cga;mount.scene.section=def.type==='null';mount.scene.flatGeometry=model.alg.kind==='rigid';mount.scene.view=saved?.view||defaultView(model.n,model.cga,mount.scene.section,mount.scene.flatGeometry);
     mount.scene.activate(false);
-    projection.value=mount.scene.view.perspective?'perspective':'orthographic';orbitMode.hidden=!model.cga||model.n!==5;orbitMode.value=mount.scene.view.orbitMode||'upright';
+    projection.value=mount.scene.view.perspective?'perspective':'orthographic';
     guideBody.innerHTML=interactionGuide(model);
     buttons.forEach(b=>{const active=+b.dataset.figureDim===dim;b.classList.toggle('active',active);b.setAttribute('aria-pressed',String(active));});
     mount.scene.render();
   }
   mount.selectDimension=selectDimension;mount.fixedDimension=fixedDimension;
   buttons.forEach(b=>b.addEventListener('click',()=>setDimension(+b.dataset.figureDim)));
-  orbitMode.addEventListener('change',()=>{const scene=mount.scene,perspective=scene.view.perspective;scene.view=defaultView(scene.n,scene.isCGA,scene.section,scene.flatGeometry,orbitMode.value);scene.view.orbitMode=orbitMode.value;scene.view.perspective=perspective;scene.render();});
   projection.addEventListener('change',()=>{mount.scene.view.perspective=projection.value==='perspective';mount.scene.render();});
   viewButton.addEventListener('click',()=>mount.scene.resetView());
   reset.addEventListener('click',()=>{mount.playing=false;cancelAnimationFrame(mount.animation);mount.model.reset();mount.scene.factorFrames.clear();renderControls(mount);mount.scene.render();});

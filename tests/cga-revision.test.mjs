@@ -10,16 +10,16 @@ import {displacementShading} from '../src/projective-field.js';
 const definition=id=>chapters.flatMap(c=>c.figures).find(d=>d.id===id);
 const near=(a,b)=>assert.ok(Math.abs(a-b)<1e-7,`${a} != ${b}`);
 const paint=m=>{const s=Object.assign(Object.create(Scene.prototype),{n:m.n,commands:[],handles:[],labels:[],view:defaultView(m.n,m.cga),factorFrames:new Map()});m.paint(s);return s;};
-test('5D free orbit has no poles; added-axis projections do not follow spatial orbit',()=>{
-  for(const section of [false,true])for(const beta of [0,.6,Math.PI/2]){const v=defaultView(5,true,section,false,'free');v.conformal=beta;v.extra=.7;const a=toView(basis(5,3),v,5,true),b=toView(basis(5,4),v,5,true);orbit(v,5,true,190,600);assert.ok(v.frame);assert.deepEqual(toView(basis(5,3),v,5,true),a);assert.deepEqual(toView(basis(5,4),v,5,true),b);for(const r of v.frame)near(length(r),1);}
+test('5D middle orbit has no poles; added-axis projections do not follow spatial orbit',()=>{
+  for(const section of [false,true])for(const beta of [0,.6,Math.PI/2]){const v=defaultView(5,true,section);v.conformal=beta;v.extra=.7;const a=toView(basis(5,3),v,5,true),b=toView(basis(5,4),v,5,true);orbit(v,5,true,190,600,1);assert.ok(v.frame);assert.deepEqual(toView(basis(5,3),v,5,true),a);assert.deepEqual(toView(basis(5,4),v,5,true),b);for(const r of v.frame)near(length(r),1);}
   const upright=defaultView(5,true);orbit(upright,5,true,0,10000);near(upright.pitch,ELEVATION_LIMIT);
-  const free=defaultView(5,true,false,false,'free');assert.ok(toView(basis(5,2),free,5,true)[1]>0);
+  const free=defaultView(5,true);assert.ok(toView(basis(5,2),free,5,true)[1]>0);
 });
 test('5D cone vertical orbit exchanges spatial up and origin without moving infinity',()=>{
-  for(const mode of ['upright','free']){const v=defaultView(5,true,true,false,mode),inf=toView(basis(5,4),v,5,true);assert.ok(toView(basis(5,2),v,5,true)[1]>0);orbit(v,5,true,80,-80,0);const before=toView(basis(5,4),v,5,true);orbit(v,5,true,0,-90,2);assert.deepEqual(toView(basis(5,4),v,5,true),before);}
+  for(const button of [0,1]){const v=defaultView(5,true,true),inf=toView(basis(5,4),v,5,true);assert.ok(toView(basis(5,2),v,5,true)[1]>0);orbit(v,5,true,80,-80,button);const before=toView(basis(5,4),v,5,true);orbit(v,5,true,0,-90,2);assert.deepEqual(toView(basis(5,4),v,5,true),before);}
 });
-test('5D free grab orbit follows a near-side point',()=>{
-  for(const section of [false,true]){const v={...defaultView(5,true,section,false,'free'),yaw:0,pitch:0},p=[0,-1,0,0,0],project=()=>screenPoint(p,v,5,true,800,500,65),start=project();orbit(v,5,true,8,0);assert.ok(project().x>start.x);const fresh={...defaultView(5,true,section,false,'free'),yaw:0,pitch:0};const before=screenPoint(p,fresh,5,true,800,500,65);orbit(fresh,5,true,0,8);assert.ok(screenPoint(p,fresh,5,true,800,500,65).y>before.y);}
+test('5D middle grab orbit follows a near-side point',()=>{
+  for(const section of [false,true]){const v={...defaultView(5,true,section,false,'free'),yaw:0,pitch:0},p=[0,-1,0,0,0],project=()=>screenPoint(p,v,5,true,800,500,65),start=project();orbit(v,5,true,8,0,1);assert.ok(project().x>start.x);const fresh={...defaultView(5,true,section,false,'free'),yaw:0,pitch:0};const before=screenPoint(p,fresh,5,true,800,500,65);orbit(fresh,5,true,0,8,1);assert.ok(screenPoint(p,fresh,5,true,800,500,65).y>before.y);}
 });
 test('cone geometry is limited to construction and its circular sections are null',()=>{
   for(const n of [4,5]){const A=new Algebra(n,'conformal'),s=Object.assign(Object.create(Scene.prototype),{n,commands:[],labels:[]});s.cgaMesh(false);assert.ok(!s.commands.some(c=>c.color===colors.green));s.commands=[];s.cgaMesh(true);const cone=s.commands.filter(c=>c.color===colors.green);assert.ok(cone.length>60);for(const p of cone.flatMap(c=>c.points))near(A.inner(A.vector(p),A.vector(p)),0);}

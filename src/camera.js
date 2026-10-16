@@ -2,7 +2,7 @@ import { basis, add, scale, dot, length, EPS } from './algebra.js';
 export const HALF_PI=Math.PI/2;
 export const ELEVATION_LIMIT=HALF_PI-.003;
 export const clamp=(x,lo,hi)=>Math.max(lo,Math.min(hi,x));
-export function defaultView(n,cga=false,section=false,flat=false,orbitMode='upright'){return {yaw:.42,pitch:.58,roll:0,extra:cga&&n===5&&!section&&orbitMode!=='free'?HALF_PI:0,conformal:0,section,orbitMode,zoom:1.15,perspective:false,center:flat?basis(n,n-1,.5):cga?add(basis(n,n-1,section?0:.65),basis(n,n-2,.5)):undefined};}
+export function defaultView(n,cga=false,section=false,flat=false){return {yaw:.42,pitch:.58,roll:0,extra:0,conformal:0,section,flatGeometry:flat,zoom:1.15,perspective:false,center:flat?basis(n,n-1,.5):cga?add(basis(n,n-1,section?0:.65),basis(n,n-2,.5)):undefined};}
 function spatialFrame(view){
   if(view.frame)return view.frame;
   const c=Math.cos(view.yaw),s=Math.sin(view.yaw),p=Math.cos(view.pitch),q=Math.sin(view.pitch);
@@ -15,11 +15,11 @@ export function toView(p,view,n,cga=false){
     let projected,hidden;
     if(n===4){projected=view.section?[p[0],other,vertical]:[p[0],p[1],vertical];hidden=view.section?0:other;}
     else if(view.section){
-      const spatial=spatialFrame({...view,frame:view.orbitMode==='free'?view.frame:null}).map(row=>dot(row,p.slice(0,3))),up=spatial[1];
+      const spatial=spatialFrame(view).map(row=>dot(row,p.slice(0,3))),up=spatial[1];
       return [spatial[0],up*Math.cos(alpha)+origin*Math.sin(alpha+beta)+infinity*Math.cos(beta),spatial[2]-up*Math.sin(alpha)+origin*Math.cos(alpha+beta)-infinity*Math.sin(beta)];
     }
     else{projected=[p[0],p[1],p[2]*Math.cos(alpha)+vertical*Math.sin(alpha)];hidden=vertical*Math.cos(alpha)-p[2]*Math.sin(alpha)+other;}
-    if(n===5&&view.orbitMode==='free'){const spatial=spatialFrame(view).map(row=>dot(row,p.slice(0,3))),up=spatial[1];return [spatial[0],up*Math.cos(alpha)+vertical*Math.sin(alpha),spatial[2]+vertical*Math.cos(alpha)-up*Math.sin(alpha)+other];}
+    if(n===5){const spatial=spatialFrame(view).map(row=>dot(row,p.slice(0,3))),up=spatial[1];return [spatial[0],up*Math.cos(alpha)+vertical*Math.sin(alpha),spatial[2]+vertical*Math.cos(alpha)-up*Math.sin(alpha)+other];}
     const result=spatialFrame({...view,frame:null}).map(row=>dot(row,projected));result[2]+=hidden;return result;
   }
   const a=view.extra||0,spatial=[p[0],p[1],p[2]||0];
@@ -29,7 +29,13 @@ export function toView(p,view,n,cga=false){
 }
 export function orbit(view,n,cga,dx,dy,button=0){
   if(button===2){if(n===3&&!cga)return;if(!cga||n===5)view.extra=clamp(view.extra-dy*.009,0,Math.PI);if(cga){view.conformal=clamp(view.conformal+dx*.009,0,HALF_PI);if(n===5&&view.section)view.extra=clamp(view.extra,0,Math.PI-view.conformal);}return;}
-  if(n===3||(cga&&(n===4||view.orbitMode!=='free'))){view.yaw-=dx*.008;view.pitch=clamp(view.pitch+dy*.007,-ELEVATION_LIMIT,ELEVATION_LIMIT);return;}
+  const mixed=(n===4&&!cga&&view.flatGeometry)||(n===5&&cga);
+  if(button===1&&!mixed)return;
+  if(button===0&&(n===3||cga||mixed)){
+    const before=spatialFrame({...view,frame:null});view.yaw-=dx*.008;view.pitch=clamp(view.pitch+dy*.007,-ELEVATION_LIMIT,ELEVATION_LIMIT);
+    if(view.frame){const after=spatialFrame({...view,frame:null}),rotation=after.map(row=>before.map(other=>dot(row,other)));view.frame=rotation.map(row=>view.frame[0].map((_,j)=>row.reduce((sum,x,k)=>sum+x*view.frame[k][j],0)));}
+    return;
+  }
   // Rotate the spatial frame about display axes; the added-axis display directions stay fixed.
   const frame=spatialFrame(view),x=dy*.007,y=dx*.008,cx=Math.cos(x),sx=Math.sin(x),cy=Math.cos(y),sy=Math.sin(y);
   const horizontal=[frame[0].map((v,i)=>cy*v+sy*frame[2][i]),frame[1],frame[2].map((v,i)=>-sy*frame[0][i]+cy*v)];
