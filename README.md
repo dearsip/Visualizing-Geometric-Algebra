@@ -22,9 +22,7 @@ A visual companion to *Projective Geometric Algebra Illuminated* by Eric Lengyel
 | Reset | Restore the diagram's inputs and options. |
 | PNG | Export the current diagram and equation. |
 
-Two-finger gestures lock to either swiping or pinching until release. After a multi-finger gesture loses a finger, lift all fingers before starting again.
-
-Dimension selectors share one state across the page. Use the display toggles to show auxiliary geometry, and **Fix value** to constrain inputs. **Orthographic** is the default camera projection; **Perspective** is also available. Operation guides can be expanded below each diagram.
+Use the display toggles to show auxiliary geometry, and **Fix value** to constrain inputs. **Orthographic** is the default camera projection; **Perspective** is also available. Operation guides can be expanded below each diagram.
 
 The coordinate convention is e₁ right, e₂ forward, and e₃ up.
 
