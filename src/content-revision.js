@@ -73,4 +73,20 @@ export function reviseContent(chapters,{V,E,I,S,R,L,GP,AGP}){
   figure('projective').ja += ' 同じ色の領域は、点が変換で移る距離に対応する。';
   figure('projective').en += ' Shading encodes the displacement between each point and its image.';
 
+  figure('meet').ja=figure('meet').ja.replaceAll('3Dで','3Dでは').replaceAll('4Dで','4Dでは');
+  chapter('projective-products').title='Projective Geometric Products';
+  figure('dipole').ja='2*radiusだけ離れた2点の組。Flat Geometryのpointに対応する。Vectorのうち1つがeₙのときFlatであると言い、Flat Geometryと等価になる。';
+  Object.assign(figure('circle'),{ja:'3点を通る円。',en:'A circle through three points.'});
+  Object.assign(figure('sphere'),{ja:'4点を通る球。',en:'A sphere through four points.'});
+  figure('cga-partner').ja=figure('cga-partner').ja.replaceAll('、','');
+  Object.assign(figure('cganorm'),{ja:'Round partかflat partか、それぞれのbulkかweightかで、計4つのcomponentに分かれる。',en:'Four components: round or flat, each with a bulk and a weight.'});
+  Object.assign(figure('cga-join'),{ja:'Round objectが含むround pointは、対応する円/球がround objectとの間にalignmentと呼ばれる位置関係を持つ。',en:'A contained round point corresponds to a circle or sphere aligned with the round object.'});
+  Object.assign(figure('cga-expansion'),{ja:'左のobjectを含み右のobjectに垂直なobject。',en:'An object containing the left object and perpendicular to the right object.'});
+  Object.assign(figure('conformal-transform'),{ja:'円/球に関する反転の組み合わせ。中心を共有する円/球で拡大縮小ができる。一般の変換はより広範である。',en:'Compositions of circle/sphere inversions. Concentric circles or spheres produce dilations; general transformations are more varied.'});
+  const normChapter=chapter('cga-norms');chapters.splice(chapters.indexOf(normChapter),1);chapters.splice(chapters.indexOf(chapter('cga-properties')),0,normChapter);
+  chapter('cga-join').title='Conformal Join & Meet';chapter('cga-join').figures.push(...chapter('cga-meet').figures);
+  chapter('cga-expansion').title='Conformal Expansion & Transformations';chapter('cga-expansion').figures.push(figure('conformal-transform'));
+  for(let i=chapters.length-1;i>=0;i--)if(['cga-meet','cga-operations'].includes(chapters[i].id))chapters.splice(i,1);
+  for(const c of chapters)if(c.group==='Exterior Algebra')c.eyebrow='Exterior Algebra';
+  for(const c of chapters)c.group=['Exterior Algebra','Euclidean Geometric Algebra'].includes(c.group)?'Euclidean Geometric Algebra':c.group==='Round Geometry · CGA'?'Conformal Geometric Algebra':'Projective Geometric Algebra';
 }

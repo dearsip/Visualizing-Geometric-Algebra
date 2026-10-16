@@ -42,3 +42,15 @@ This is a development record, excluded from the public site.
 - [x] Round Point carrier line, tangent/parallel planes, embedded section, spatial projection and radius toggles.
 - [x] Raw carrier/cocarrier representations; fixed infinity factor in Make Flat; conformal notation only on Construction.
 - [x] 149 numerical checks, 22 browser input checks, all 20 chapters in both dimensions on desktop and at 375px width; no console errors or horizontal overflow. Physical phone operation remains unverified.
+
+## CGA and interaction revision 2026-10-16
+
+- [x] Three algebra groups, 18 chapters / 49 diagrams, consolidated CGA join/meet and expansion/transformations; no page-level dimension selector.
+- [x] Nearer antiproduct inputs, separated sandwich inputs, bounded default motor normals, higher-grade motor targets, preset-to-custom transitions.
+- [x] Separate antiproduct wedge/dot/antidot loci, permanent rotated angle arc; one 20%-opacity displacement section.
+- [x] Uniform CGA display-axis scale, shifted centre, cone only in construction, thinner Horosphere axes, 5D upright/free orbit reset and independent cone origin fold.
+- [x] Imaginary embedded guides and spatial geometry, midpoint dipole labels and no duplicate endpoints.
+- [x] Per-grade property state, intermediate cocarrier/container objects, coincident dual geometry in a shared color, embedded imaginary partners.
+- [x] Norms before related objects; independent component/norm toggles, coordinate-projected factors, flat toggle, component/norm definitions and vector radius-norm symbol.
+- [x] Non-null round-point-only joins, finite point-valued meet examples, first-object-flat expansion, editable conformal reflection spheres and presets with higher-grade targets.
+- [x] 156 numerical/geometry checks and 24 browser input checks.

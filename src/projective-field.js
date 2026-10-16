@@ -17,7 +17,7 @@ export function displacementShading(scene,a,v){
     for(let y=0;y<size;y++)for(let x=0;x<size;x++){const t=-r+(x+.5)*step,s=-r+(y+.5)*step,index=(y*size+x)*4;if(t*t+s*s>r*r)continue;const k=distance(t,s),footprint=omega*Math.max(Math.abs(distance(t+step,s)-k),Math.abs(distance(t,s+step)-k)),amplitude=Number.isFinite(footprint)?1/(1+footprint*footprint):0,f=.5+.5*amplitude*Math.cos(Number.isFinite(k)?k*omega:0);for(let i=0;i<3;i++)data[index+i]=Math.round([35,98,62][i]+f*([183,213,159][i]-[35,98,62][i]));data[index+3]=220;}
     cached={d,texture:{width:size,height:size,data}};textureCache.set(scene,cached);
   }
-  for(const transverse of perp.slice(0,h===3?2:1)){const center=basis(a.length,a.length-1),points=[[-r,-r],[r,-r],[r,r],[-r,r]].map(([t,s])=>add(center,[...add(scale(axis,t),scale(transverse,s)),0]));scene.commands.push({kind:'texture',points,texture:cached.texture,background:true,alpha:.8});}
+  for(const transverse of perp.slice(0,1)){const center=basis(a.length,a.length-1),points=[[-r,-r],[r,-r],[r,r],[-r,r]].map(([t,s])=>add(center,[...add(scale(axis,t),scale(transverse,s)),0]));scene.commands.push({kind:'texture',points,texture:cached.texture,background:true,alpha:.2});}
 }
 // Level sets of half the displacement, rather than an arbitrary invariant conic.
 export function displacementSurface(scene,a,v){

@@ -28,31 +28,31 @@
 10. Motor / Flectorは2Dでも成立する。2D Motorは回転／平行移動、Flectorは鏡映／映進。Motorをscrew motionで補間し、Flectorは固定ReflectionとMotorに分けて補間する。det=−1の変換をidentityから連続なisometryで結ぶことはできない。
 11. Angleは同gradeならsigned contractionを使い、違うgradeならそのbulk normを使う。Parametric formはp(α)=hat(sup(u))+att(u)∨α★。Parameterのgradeはobject grade−2。
 12. 原著の名称はHorosphere。Null coneのunit-origin-axis断面を描く。Round pointはInfinity係数に½(|x|²+r²)を使い、unit weightで自己dotは−r²。
-13. CGAの追加軸の表示長1/√2と√2はmetric normとは違う。Null coneの断面、直交するspatial parabola、Horosphereのcoarse meshを描く。
+13. CGAの表示軸は同じ長さとし、計量とは独立に扱う。Null Coneの図だけに45°断面と半直線を置き、それ以降はHorosphereの細いparabolaとcoarse meshを描く。
 14. Round objectはHorosphere上の形とu=0の形を両方表示する。Dipoleの両端、Circleのellipse、Sphereのellipsoid、Flat objectのparabolic sectionを実際のnull embeddingで計算する。Imaginaryの場合は実のHorosphere交点を描かず、中心と|r|を補助表示する。
 
 ## Contents
 
-20の内容ページ、51の図。Euclidean DotをGeometric Productの前に置く。Flat Normsは式だけを補足に置く。DistanceはPoint–Point / Point–Line / Point–Plane / Line–Line、DualはPoint / Line / PlaneのBulk / Weightを同時表示する。Projectionは4種の演算を1ページにまとめ、各演算に1図を置き、gradeの組み合わせを選ぶ。
+18の内容ページ、49の図。Euclidean DotをGeometric Productの前に置く。Flat Normsは式だけを補足に置く。DistanceはPoint–Point / Point–Line / Point–Plane / Line–Line、DualはPoint / Line / PlaneのBulk / Weightを同時表示する。Projectionは4種の演算を1ページにまとめ、各演算に1図を置き、gradeの組み合わせを選ぶ。
 
-Projective Product / Antiproductを独立した図にし、SandwichとIsometry、Motor / Flectorへ続ける。CGAはConstruction、Round objects、概念ごとのCarrier / Cocarrier / Container / Dual / Partner / Attitude / Conjugateと後置のNorm、Join、Meet、Expansion、Dot / Containment、Translation / Rotation / Dilation / Sphere inversionを扱う。Join / Meet / Expansionではdimensionに応じたgrade pairとFlat化を選べる。
+Projective Product / Antiproductを独立した図にし、SandwichとIsometry、Motor / Flectorへ続ける。CGAはConstruction、Round objects、Carrier / Cocarrier / Container、Norms、Dual / Partner / Attitude / Conjugate、Join / Meet、Expansion / Transformationsを扱う。変換は編集可能な反転球・平面の合成で、Translation / Rotation / Dilation / InversionとCircular / Elliptic / Hyperbolic / Loxodromicのpresetを持つ。Join / Meet / Expansionではdimensionに応じたgrade pairとFlat化を選べる。
 
 ## Bounds of the visualization
 
 - 高次元の全ての面を一つの3D射影で分離して見せることはできない。Fold、カメラ、トグルで確認する。
 - CGAのNull coneとHorosphereは断面とmeshの表示。SphereのHorosphere intersectionはgreat circles、latitude mesh、シルエットで示す。
-- Round objectの入力factorは主にunit-weight Null point。Round pointとDotの図ではRadiusを直接変えられる。任意の非simple multivectorを幾何学的bladeとして描かない。
+- Round objectの入力factorは主にunit-weight Null point。Round pointとJoinのRound point factorsではRadiusを直接変えられる。任意の非simple multivectorを幾何学的bladeとして描かない。
 - CGAの全てのProjection、Operation duality、Transversionは今回の図に含めない。
 - Source PDFsと検討用画像はGitにも公開成果物にも入れない。
 
 ## Verification
 
-`npm test`: 149 checks. Clifford relation、basis associativity、Complement、Projection、CGA embedding、Motor / Flector、全図とcontrols、cameraの向きとfold端点、斜めlocusのdrag速度、連続frame、Attitude / Distance、Line分解、Parametric form、変位量による陰影、Round Pointの接平面と断面を検証する。
+`npm test`: 156 checks. Clifford relation、basis associativity、Complement、Projection、CGA embedding、Motor / Flector、全図とcontrols、cameraの向きとfold端点、斜めlocusのdrag速度、連続frame、Attitude / Distance、Line分解、Parametric form、変位量による陰影、Round Pointの接平面と断面を検証する。
 
-ブラウザでは全20ページの両次元版、1280pxと375pxの表示、横溢れと描画例外、共通の次元切替と編集値の保持、操作の有効化／解除を確認する。ローカルのgesture pageは22の入力試験を行う。実機スマホでの操作感は未確認。
+ブラウザでは全18ページの両次元版、1280pxと375pxの表示、横溢れと描画例外、共通の次元切替と編集値の保持、操作の有効化／解除を確認する。ローカルのgesture pageは24の入力試験を行う。実機スマホでの操作感は未確認。
 
 CGAのNull pointのドラッグは、投影された移動先を反復的に解き、origin coefficientを1に戻してnull条件を保つ。右ドラッグは点を捕捉せず回転に専用する。
 
-Round Pointの補助図はunit-origin slice内のHorosphereの接平面と、aを通る平行面を使う。Null Coneとの断面は|y−x|²=r²となる。Horosphereからのずれはinfinity軸方向のr²/2であり、origin軸方向ではない。Imaginaryの場合、実の断面を描かず、u=0に破線のガイドを置く。
+Round Pointの補助図はunit-origin slice内のHorosphereの接平面と、aを通る平行面を使う。Null Coneとの断面は|y−x|²=r²となる。Horosphereからのずれはinfinity軸方向のr²/2であり、origin軸方向ではない。Imaginaryの場合、実の断面は存在しない。紫色のガイドをparallel plane上とu=0の両方に置く。
 
 Horosphereのドラッグは反復解が投影接線の特異点で止まったときに有限の候補を探索し、null条件を保って継続する。

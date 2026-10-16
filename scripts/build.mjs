@@ -15,6 +15,7 @@ for (const chapter of chapters) {
 }
 // Preserve links to the former one-figure projection pages.
 for(const id of ['orthogonal','central','orthogonal-anti','central-anti'])await writeFile(path.join(dist,`${id}.html`),`<!doctype html><meta charset="utf-8"><title>Geometric Projection</title><a href="./projection.html#${id}">Geometric Projection</a><script>location.replace('./projection.html'+location.search+'#${id}')</script>`);
+for(const [old,target] of [['cga-meet','cga-join'],['cga-operations','cga-expansion']])await writeFile(path.join(dist,old+'.html'),`<!doctype html><meta charset="utf-8"><a href="./${target}.html">${target}</a><script>location.replace('./${target}.html'+location.search)</script>`);
 async function audit(dir) {
   for (const f of await readdir(dir, { withFileTypes: true })) {
     const p = path.join(dir, f.name);

@@ -2,7 +2,7 @@
 
 `Projective Geometric Algebra Illuminated` (Eric Lengyel) を参照して制作した、動かせる図の試作です。原著の図や本文を転載したサイトではありません。学習を補助する用途を想定し、トップに定義の変更・簡略化と、このサイトだけでの学習を想定しないことを明記しています。
 
-20の内容ページ、51種類の図を用意しています。各図のそばの次元切替は、ページ内で共通の状態を操作します。RGAは「2D Flat · 3D algebra / 3D Flat · 4D algebra」、CGAは「2D Round · 4D algebra / 3D Round · 5D algebra」と表記します。PlaneとSphereの単独図は、それぞれ存在する次元だけを表示します。
+18の内容ページ、49種類の図を用意しています。各図のそばの次元切替は、ページ内で共通の状態を操作します。RGAは「2D Flat · 3D algebra / 3D Flat · 4D algebra」、CGAは「2D Round · 4D algebra / 3D Round · 5D algebra」と表記します。PlaneとSphereの単独図は、それぞれ存在する次元だけを表示します。
 
 ## Local preview
 
@@ -18,7 +18,7 @@ npm run dev
 
 ## Controls
 
-- 背景を左ドラッグ: 掴んだ側がマウスに追従するOrbit。3Dはe₃を上に保ち、仰角は±90°の直前まで。4D Flatは自由回転。CGAは追加軸の組を縦軸として回転。
+- 背景を左ドラッグ: 掴んだ側がマウスに追従するOrbit。3Dはe₃を上に保ち、仰角は±90°の直前まで。4D Flatは自由回転。CGAは追加軸の組を縦軸として回転。5DではUpright orbit / Free orbitを選べ、切替時に姿勢をリセットします。Free orbitはe₁e₂e₃の間で回転します。
 - 右ドラッグ上下: 点の上を含め、現在の上方向と追加軸の緯度を0–180°で変えます。3Dでは右ドラッグは動作しません。
 - CGAで右ドラッグ左右: origin axisとPoint at infinityの軸を滑らかに交換。
 - vectorの先端をドラッグ: 表示の視線に垂直な面内で移動。

@@ -40,9 +40,10 @@ export function cgaRound(a,alg) {
 export function spatialRound(scene,a,alg,label,color,options={}) {
   const info=cgaRound(a,alg);if(!info)return;
   if(info.flat){scene.flat(info.blade,info.alg,label,color);return info;}
+  if(info.radius2< -EPS&&!options.preserveColor)color='#9b70af';
   const {center,radius2,dirs}=info,r=Math.sqrt(Math.abs(radius2)),imaginary=radius2< -EPS;
-  if(alg.gradeOf(a)===1){scene.point(center,label,color,5);if(options.radius&&r>EPS)scene.sphere(center,r,color,true,.4,Array.from({length:alg.n-2},(_,i)=>basis(alg.n,i)));}
-  else if(dirs.length===1){scene.point(add(center,scale(dirs[0],r)),label,color,5);scene.point(add(center,scale(dirs[0],-r)),'',color,5);scene.line(add(center,scale(dirs[0],-r)),add(center,scale(dirs[0],r)),color,1,true,.5);}
+  if(alg.gradeOf(a)===1){scene.point(center,label,color,4);if(r>EPS)scene.sphere(center,r,color,imaginary,.6,Array.from({length:alg.n-2},(_,i)=>basis(alg.n,i)));}
+  else if(dirs.length===1){if(options.endpoints){scene.point(add(center,scale(dirs[0],r)),'',color,4);scene.point(add(center,scale(dirs[0],-r)),'',color,4);}scene.label(center,label,color,{dy:-12});scene.line(add(center,scale(dirs[0],-r)),add(center,scale(dirs[0],r)),color,1,true,.5);}
   else if(dirs.length===2){scene.circle(center,dirs[0],dirs[1],r,color,imaginary,.95);scene.label(add(center,scale(dirs[0],r)),label,color,{dy:-10});}
   else if(dirs.length>=3){scene.sphere(center,r,color,true,.8,dirs);scene.label(center,label,color,{dy:-15});}
   if(options.radius){const direction=dirs[0]||basis(alg.n,0);scene.line(center,add(center,scale(direction,r)),color,2);scene.label(add(center,scale(direction,r*.5)),imaginary?'|r|':'r',color,{dy:15,size:16,scalar:true});}

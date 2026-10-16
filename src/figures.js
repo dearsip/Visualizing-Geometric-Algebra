@@ -2,6 +2,7 @@ import { Algebra, basis, add, sub, scale, dot, length, unit, EPS, formatMV, indi
 import { colors } from './scene.js';
 import { embed, affine, cgaParts, cgaProperties, spatialRound, removeInfinity, closestPoint, reflectionPath, composeReflections, screwParameters } from './geometry.js';
 import { V, E, I, S, R, L, GP, AGP } from './content.js';
+import * as advanced from './advanced-revisions.js';
 import * as revised from './lesson-revisions.js';
 const Z=n=>Array(n).fill(0), val=x=>Number(x.toFixed(3)), m=v=>V(v), a=m('a'),b=m('b'),c=m('c');
 const check=(key,label,value=false)=>({type:'check',key,label,value});
@@ -14,7 +15,7 @@ export class FigureModel {
   constructor(def,n){
     this.def=def;this.baseN=n;this.cga=['null','roundpoint','cganorm','round','containment','cgameet','conformal-transform',...revised.cgaTypes].includes(def.type);
     this.n=this.cga?n+1:n;this.alg=new Algebra(this.n,this.cga?'conformal':['wedge','distribute','trivector','basis','complement','antiwedge','geometric','reflection','rotation'].includes(def.type)?'euclidean':'rigid');
-    this.state={};this.vectors=[];this.controls=[];this.rows=[];this.formula=def.formula;this.names=[];this.init();revised.configure(this);
+    this.state={};this.vectors=[];this.controls=[];this.rows=[];this.formula=def.formula;this.names=[];this.init();revised.configure(this);advanced.configure(this);
     this.initial=JSON.parse(JSON.stringify({state:this.state,vectors:this.vectors,names:this.names,grades:this.grades}));
   }
   addControl(spec){this.controls.push(spec);if(spec.type!=='button')this.state[spec.key]=spec.value;}
@@ -56,7 +57,7 @@ export class FigureModel {
   }
   roundSeeds(center,r){const m=this.n-2,n=this.n;if(m===2)return [0,2*Math.PI/3,4*Math.PI/3].map(t=>embed(add(center,[r*Math.cos(t),r*Math.sin(t)]),n));return [[1,1,1],[1,-1,-1],[-1,1,-1],[-1,-1,1]].map(u=>embed(add(center,scale(unit(u),r)),n));}
   update(key,value){
-    if(revised.update(this,key,value))return;
+    if(advanced.update(this,key,value)||revised.update(this,key,value))return;
     if(key==='infinity'){this.vectors=this.vectors.map(v=>{const p=[...v];p[this.n-1]=0;return p;});return;}
     if(key==='contained'){this.vectors[0]=[...this.vectors[1]];return;}
     this.state[key]=value;
@@ -64,14 +65,14 @@ export class FigureModel {
     if(key==='count'){const p=[...this.vectors[0]];this.setVectors(+value+1);this.vectors[0]=p;this.names=['v₀',...Array.from({length:+value},(_,i)=>String.fromCharCode(97+i))];}
     if(key==='radius2'){const q=this.vectors[0],w=q[this.n-2];q[this.n-1]=(dot(q.slice(0,this.n-2),q.slice(0,this.n-2)) + value*w*w)/(2*(w||1));}
   }
-  move(i,next){revised.move(this,i,next);}
-  reset(){const saved=JSON.parse(JSON.stringify(this.initial));this.state=saved.state;this.vectors=saved.vectors;this.names=saved.names;this.grades=saved.grades;this.frames.clear();}
+  move(i,next){revised.move(this,i,next);advanced.moved(this,i);}
+  reset(){const saved=JSON.parse(JSON.stringify(this.initial));this.state=saved.state;this.vectors=saved.vectors;this.names=saved.names;this.grades=saved.grades;this.frames.clear();this.gradeStates?.clear();}
   row(label,value){this.rows.push({label,value});}
   mv(x){return formatMV(x,this.alg);}
   inputs(scene,indices=revised.activeInputs(this)) {indices.forEach(i=>scene.handle(this.vectors[i],this.names[i]||String.fromCharCode(97+i),i,[colors.a,colors.b,colors.c][i%3],null,false,revised.dragSpace(this,i)));}
   genericSource(){const grade=+(this.state.grade??this.def.grade??2);if(['complement','dual'].includes(this.def.type)){if(grade===0)return this.alg.scalar(this.state.scalar);if(grade===this.n)return this.alg.volume(this.state.scalar);}return grade===0?this.alg.scalar(1):this.alg.blade(this.vectors.slice(0,grade));}
   paint(scene){
-    if(revised.paint(this,scene))return;
+    if(advanced.paint(this,scene,revised.embeddedRound)||revised.paint(this,scene))return;
     this.rows=[];this.formula=this.def.formula;this.status='';scene.isCGA=this.cga;
     const t=this.def.type,A=this.alg,n=this.n,s=this.state,vs=this.vectors,vec=i=>A.vector(vs[i]),blade=ids=>A.blade(ids.map(i=>vs[i]));
     if(this.cga){if(s.mesh||t==='null')scene.cgaMesh(t==='null');}

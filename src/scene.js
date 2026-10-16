@@ -23,7 +23,7 @@ export class Scene {
   }
   dispose(){this.resize.disconnect();for(const [e,f,o] of this.listeners)this.canvas.removeEventListener(e,f,o);}
   activate(value=true){this.engaged=value;if(!value)this.up({});this.canvas.classList.toggle('interactive',value);this.onActivation?.(value);}
-  resetView(){const perspective=this.view.perspective;this.view=defaultView(this.n,this.isCGA,this.section,this.flatGeometry);this.view.perspective=perspective;this.render();}
+  resetView(){const perspective=this.view.perspective,orbitMode=this.view.orbitMode;this.view=defaultView(this.n,this.isCGA,this.section,this.flatGeometry,orbitMode);this.view.perspective=perspective;this.view.orbitMode=orbitMode;this.render();}
   project(p){return screenPoint(p,this.view,this.n,this.isCGA,this.w,this.h,this.s);}
   toDisplay(p){return toView(p,{...this.view,frame:null,yaw:0,pitch:0,roll:0},this.n,this.isCGA);}
   line(a,b,color=colors.ink,width=1,dash=false,alpha=1){this.commands.push({kind:'line',points:[a,b],color,width,dash,alpha});}
@@ -124,19 +124,18 @@ export class Scene {
   }
   orthonormal(vs){const r=[];for(let v of vs){v=[...v];for(const u of r)v=sub(v,scale(u,dot(u,v)));if(length(v)>EPS)r.push(unit(v));}return r;}
   cgaMesh(section=false){
-    const w=this.n-2,u=this.n-1,m=this.n-2;
-    const point=(x,weight=1)=>{const p=Z(this.n);x.forEach((v,i)=>p[i]=v);p[w]=weight;p[u]=dot(x,x)/(2*weight);return p;};
-    // A true null-cone section in (e1, origin, infinity), sampled without book artwork.
-    for(const radius of [.8,1.6,2.4]){let previous=null;for(let j=0;j<=64;j++){const t=j*Math.PI/32,p=Z(this.n);p[0]=radius*Math.cos(t);p[w]=radius*(1+Math.sin(t))/2;p[u]=radius*(1-Math.sin(t));if(previous)this.line(previous,p,colors.green,.9,true,.45);previous=p;}}
-    // Orthogonal spatial parabola sections and their homogeneous rays form the cone.
-    for(let axis=0;axis<m;axis++){
-      if(section&&this.n===4&&axis===1)continue;
-      for(let weight of [.5,1,1.8]){let previous=null;for(let x=-2;x<=2.001;x+=.1){const spatial=Array(m).fill(0);spatial[axis]=x;const p=point(spatial,weight);if(previous)this.line(previous,p,weight===1?colors.purple:colors.green,weight===1?2.3:.8,weight!==1,.7);previous=p;}}
-      for(let x of [-1.7,-.85,.85,1.7]){const spatial=Array(m).fill(0);spatial[axis]=x;const p=point(spatial);this.line(Z(this.n),scale(p,1.7),colors.green,.8,true,.35);}
+    const w=this.n-2,u=this.n-1,m=this.n-2,point=x=>[...x,1,dot(x,x)/2],axes=Array.from({length:m},(_,i)=>i).filter(i=>!(section&&this.n===4&&i===1));
+    // Only the construction diagram shows the cone; every later diagram uses its unit-origin section.
+    if(section){
+      const t=1.8,axis=add(basis(this.n,w,1/Math.sqrt(2)),basis(this.n,u,1/Math.sqrt(2))),q=sub(basis(this.n,w,1/Math.sqrt(2)),basis(this.n,u,1/Math.sqrt(2))),frame=[basis(this.n,0),...(this.n===5?[basis(this.n,1)]:[]),q];
+      const pairs=this.n===4?[[0,1]]:[[0,1],[1,2],[2,0]];
+      for(const [i,j] of pairs){let prev;for(let k=0;k<=64;k++){const phi=k*Math.PI/32,p=add(scale(axis,t),add(scale(frame[i],t*Math.cos(phi)),scale(frame[j],t*Math.sin(phi))));if(prev)this.line(prev,p,colors.green,1.1,true,.55);if(k%8===0)this.line(Z(this.n),scale(p,1.35),colors.green,.7,true,.4);prev=p;}}
+      this.label(add(scale(axis,t),scale(frame[0],t)),'Null Cone',colors.green,{dy:-18});
     }
-    if(!(section&&this.n===4))for(let fixed=-1.6;fixed<=1.6;fixed+=.8)for(let swap=0;swap<2;swap++){let previous=null;for(let x=-2;x<=2.001;x+=.12){const spatial=Array(m).fill(0);spatial[swap]=x;spatial[1-swap]=fixed;const p=point(spatial);if(previous)this.line(previous,p,colors.purple,.8,true,.35);previous=p;}}
-    const center=basis(this.n,w);if(section)this.disk(center,[basis(this.n,0),basis(this.n,u)],2.7,'#c3af52',.03,true);else if(this.n===4)this.disk(center,[basis(this.n,0),basis(this.n,1)],2.7,'#c3af52',.03,true);else this.sphere(center,2.7,'#c3af52',true,.4,null,{mesh:true});
-    if(section){this.label(point([1.8],1.8),'Null Cone',colors.green,{dx:7,dy:-15,size:17});this.label(point([-1.5]),'Horosphere',colors.purple,{dx:-12,dy:-15,size:17});}
+    for(const axis of axes){let previous;for(let x=-2.3;x<=2.301;x+=.07){const v=Array(m).fill(0);v[axis]=x;const p=point(v);if(previous)this.line(previous,p,colors.purple,section?1.8:.95,false,.65);previous=p;}}
+    if(!(section&&this.n===4))for(let fixed=-1.6;fixed<=1.6;fixed+=.8)for(let swap=0;swap<2;swap++){let prev;for(let x=-2;x<=2.001;x+=.12){const v=Array(m).fill(0);v[swap]=x;v[1-swap]=fixed;const p=point(v);if(prev)this.line(prev,p,colors.purple,.65,true,.3);prev=p;}}
+    const center=basis(this.n,w);if(section)this.disk(center,[basis(this.n,0),basis(this.n,u)],2.7,'#c3af52',.025,true);else if(this.n===4)this.disk(center,[basis(this.n,0),basis(this.n,1)],2.7,'#c3af52',.025,true);else this.sphere(center,2.7,'#c3af52',true,.3,null,{mesh:true});
+    if(section)this.label(point([-1.5,...Array(m-1).fill(0)]),'Horosphere',colors.purple,{dy:-18});
   }
   angle(a,b){if(length(a)<EPS||length(b)<EPS)return;const u=unit(a);let v=sub(unit(b),scale(u,dot(u,unit(b))));if(length(v)<EPS){if(dot(unit(a),unit(b))>=0)return;const candidates=this.orthonormal(Array.from({length:this.n},(_,i)=>sub(basis(this.n,i),scale(u,u[i]))));v=candidates[0];if(this.view){const o=this.project(Z(this.n)),q=this.project(u),area=d=>{const p=this.project(d);return Math.abs((q.x-o.x)*(p.y-o.y)-(q.y-o.y)*(p.x-o.x));};v=candidates.reduce((best,d)=>area(d)>area(best)?d:best,v);}}v=unit(v);const theta=Math.acos(Math.max(-1,Math.min(1,dot(unit(a),unit(b)))));let prev=scale(u,.45);for(let i=1;i<=24;i++){const t=theta*i/24,p=add(scale(u,.45*Math.cos(t)),scale(v,.45*Math.sin(t)));this.line(prev,p,colors.ink,1.5);prev=p;}}
   render(){

@@ -25,3 +25,5 @@ body{font-size:16px}.brand{font-size:14px}.brand small{font-size:12px}.edition{f
 .right-complement > .mv > .basis-letter::after,.left-complement > .mv > .basis-letter::after{content:'';position:absolute;left:0;right:0;height:1px;background:currentColor}
 .right-complement > .mv > .basis-letter::after{top:.18em}.left-complement > .mv > .basis-letter::after{bottom:.08em}
 @media(max-width:900px){.figure-side{max-height:420px}}@media(max-width:500px){.figure-side{max-height:380px}}
+
+.workspace-bar{display:none}.radius-norm-symbol{display:inline-block;width:.8em;height:.8em;border:1px solid currentColor;border-radius:50%;position:relative;vertical-align:baseline}.radius-norm-symbol::after{content:"";position:absolute;width:50%;height:1px;background:currentColor;left:50%;top:50%;transform-origin:left;transform:rotate(-30deg)}
