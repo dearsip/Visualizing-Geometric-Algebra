@@ -12,6 +12,25 @@ import { activeInputs,dragSpace,embeddedRound,projectiveSurface,surfaceRetractio
 import { mathTokens } from '../src/math-label.js';
 const near=(a,b,t=1e-6)=>assert.ok(Math.abs(a-b)<t,`${a} != ${b}`);
 const definition=type=>chapters.flatMap(c=>c.figures).find(d=>d.type===type);
+
+test('reflection product parallelograms show matching source and image angle arcs',()=>{
+  for(const dimension of [3,4]){
+    const model=new FigureModel(definition('reflection'),dimension);
+    const scene=Object.assign(Object.create(Scene.prototype),{n:dimension,commands:[],labels:[],handles:[],factorFrames:new Map(),view:defaultView(dimension)});
+    const arcs=[];scene.angle=(first,second)=>arcs.push([first,second]);
+    model.update('products',true);
+    for(const moved of [false,true]){
+      if(moved)model.move(1,model.vectors[1].map((value,axis)=>value+.17*(axis+1)));
+      arcs.length=0;model.paint(scene);assert.equal(arcs.length,2);
+      assert.deepEqual(arcs[0],[model.vectors[0],model.vectors[1]]);
+      const image=scale(model.alg.coordinates(model.alg.reflect(model.alg.vector(model.vectors[1]),model.alg.vector(model.vectors[0]))),-1);
+      assert.deepEqual(arcs[1],[image,model.vectors[0]]);
+      const angle=([first,second])=>Math.acos(Math.max(-1,Math.min(1,dot(first,second)/(length(first)*length(second)))));
+      near(angle(arcs[0]),angle(arcs[1]));
+    }
+    model.update('products',false);arcs.length=0;model.paint(scene);assert.equal(arcs.length,0);
+  }
+});
 test('grab orbit follows drag on the near side in orthographic and perspective views',()=>{
   for(const perspective of [false,true])for(const n of [3,4]){const v={...defaultView(n),yaw:0,pitch:0,perspective},point=[0,-1,0,...(n===4?[0]:[])],project=()=>screenPoint(point,v,n,false,800,500,65),p=project();orbit(v,n,false,8,0);assert.ok(project().x>p.x);v.yaw=0;v.roll=0;const q=project();orbit(v,n,false,0,8);assert.ok(project().y>q.y);}
 });
