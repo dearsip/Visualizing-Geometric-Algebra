@@ -68,7 +68,11 @@ export function update(m,key,value){
 export function activeInputs(m){const t=m.def.type;if(t==='distance')return Array.from({length:+m.state.case===3?4:+m.state.case+2},(_,i)=>i);if(t==='join')return Array.from({length:+m.state.case===1?3:2},(_,i)=>i);if(t==='meet'&&m.n===4&&+m.state.case===1)return [0,1,2,3,4];if(['complement','dual'].includes(t)&&[0,m.n].includes(+m.state.grade))return [];const indices=m.vectors.map((_,i)=>i);if(['round','containment'].includes(t)&&m.state.flat)return indices.slice(0,-1);if(m.cga&&m.grades&&!m.state.pointOnly)return indices.filter(i=>!(m.state.flatA&&m.grades[0]>1&&i===m.grades[0]-1)&&!(m.state.flatB&&m.grades[1]>1&&i===m.vectors.length-1));return indices;}
 export function dragSpace(m,i){
   const n=m.n,t=m.def.type,h=n-1;
-  if(m.state.fix&&['geometric','projective-product'].includes(t))return [];
+  if(fixedProduct(m)){
+    const frame=[];
+    for(const source of m.vectors.slice(0,2)){let direction=[...source];for(const axis of frame)direction=sub(direction,scale(axis,dot(direction,axis)));if(length(direction)>EPS)frame.push(unit(direction));}
+    return frame;
+  }
   if(m.cga&&t==='conformal-transform'&&i>=+m.state.objectGrade)return Array.from({length:n},(_,j)=>basis(n,j));
   if(m.cga&&t!=='roundpoint')return Array.from({length:n},(_,j)=>j).filter(j=>t!=='null'||j!==1).map(j=>basis(n,j));
   let frame=Array.from({length:n},(_,j)=>basis(n,j));
@@ -78,15 +82,23 @@ export function dragSpace(m,i){
   if(m.state.lockWeight)frame=restrict(frame,h);return frame;
 }
 function restrict(frame,index){const row=frame.map(v=>v[index]);if(length(row)<EPS)return frame;const coefficientSpace=perpendicularFrame(row);return coefficientSpace.map(coefs=>frame.reduce((s,v,i)=>add(s,scale(v,coefs[i])),zero(frame[0].length)));}
+export const fixedProduct=m=>m.state.fix&&['geometric','projective-product'].includes(m.def.type);
 export function move(m,i,next){
   const t=m.def.type,n=m.n,old=m.vectors[i];if(!old)return true;
   if(m.state.fix||m.state.lockWeight){const space=dragSpace(m,i),delta=sub(next,old);next=add(old,space.reduce((s,v)=>add(s,scale(v,dot(v,delta)/(dot(v,v)||1))),zero(n)));}
+  if(fixedProduct(m)){
+    const algebra=m.alg,vector=algebra.vector(next),square=algebra.inner(vector,vector);
+    if(square<1e-6||algebra.inner(algebra.vector(old),algebra.vector(old))<1e-6)return true;
+    const product=algebra.gp(algebra.vector(old),algebra.vector(m.vectors[1-i])),partner=algebra.coordinates(scale(algebra.gp(vector,product),1/square));
+    if([...next,...partner].some(value=>!Number.isFinite(value)||Math.abs(value)>100))return true;
+    m.vectors[1-i]=partner;
+  }
   if(m.cga&&!isFreeRoundPoint(m,i)&&!(t==='conformal-transform'&&i>=+m.state.objectGrade)){const x=next.slice(0,n-2);if(t==='null')x[n-3]=0;next=embed(x,n,t==='cga-dot'?m.state[i===0?'radiusA':'radiusB']:radiusFor(m,i));}
   if(m.state.unitWeight&&Math.abs(next[n-1])>EPS)next=scale(next,1/next[n-1]);m.vectors[i]=next;
   if(t==='roundpoint'){const w=next[n-2];if(Math.abs(w)>EPS)m.state.radius2=-m.alg.inner(m.alg.vector(next),m.alg.vector(next))/(w*w);}
   return true;
 }
-function inputs(m,scene,indices=activeInputs(m),labels=null){for(const i of indices){scene.handle(m.vectors[i],labels?.[i]??m.names[i],i,m.grades?(i<m.grades[0]?colors.a:colors.b):[colors.a,colors.b,colors.c][i%3],null,false,dragSpace(m,i));if(m.cga&&!isFreeRoundPoint(m,i))scene.handles.at(-1).retract=surfaceRetraction(m,i);}}
+function inputs(m,scene,indices=activeInputs(m),labels=null){for(const i of indices){scene.handle(m.vectors[i],labels?.[i]??m.names[i],i,m.grades?(i<m.grades[0]?colors.a:colors.b):[colors.a,colors.b,colors.c][i%3],null,false,dragSpace(m,i));if(fixedProduct(m))scene.handles.at(-1).retract=point=>point;else if(m.cga&&!isFreeRoundPoint(m,i))scene.handles.at(-1).retract=surfaceRetraction(m,i);}}
 export function surfaceRetraction(m,i){return v=>{const n=m.n,w=v[n-2],old=m.vectors[i],radius=m.def.type==='cga-dot'?m.state[i===0?'radiusA':'radiusB']:radiusFor(m,i);if(Math.abs(w)<1e-5)return old;const x=v.slice(0,n-2).map(x=>x/w);if(m.def.type==='null')x[n-3]=0;return embed(x,n,radius);};}
 function flat(scene,m,a,label,color,homogeneous=false){const unit=Math.abs(m.alg.weightNorm(a)-1)<1e-7,k=m.alg.gradeOf(a),coords=k===1?m.alg.coordinates(a):null,duplicate=unit&&coords&&scene.labels.some(x=>x.text===label&&length(sub(x.p,coords))<1e-7);scene.flat(a,m.alg,duplicate?'':unit?label:hat(label),color);if(homogeneous&&k>1){const fs=sourceFactors(m,a);if(fs)scene.blade(fs,label,{color,alpha:.1});else scene.element(a,m.alg,label,{color,alpha:.1});}}
 function sourceFactors(m,a){const k=m.alg.gradeOf(a);if(k<2)return null;for(let i=0;i<=m.vectors.length-k;i++){const fs=m.vectors.slice(i,i+k),b=m.alg.blade(fs);if(length(sub(a,b))<1e-7)return fs;}return null;}

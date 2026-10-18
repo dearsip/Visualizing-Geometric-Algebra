@@ -59,7 +59,35 @@ test('projective shading and surfaces use the displacement invariant on the unit
   for(const n of [3,4]){const a=[1.3,.4,...(n===4?[.2]:[]),.5],v=[.8,-.7,...(n===4?[.1]:[]),1.2],p=scale(v.slice(0,-1),1/v.at(-1)),k=halfDisplacement(a,p),out=reflectedPosition(a,p),scene=Object.assign(Object.create(Scene.prototype),{n,commands:[],labels:[]});near(halfDisplacement(a,out),k);projectiveSurface(scene,a,v);const mesh=scene.commands.flatMap(c=>c.points);assert.ok(mesh.length>20);for(const p of mesh){near(p[n-1],1);near(halfDisplacement(a,p.slice(0,-1)),k,1e-5);}}
 });
 
-test('geometric product Fix value freezes both inputs, including coordinate edits',()=>{for(const n of [3,4])for(const type of ['geometric','projective-product']){const m=new FigureModel(definition(type),n),before=structuredClone(m.vectors);m.update('fix',true);for(let i=0;i<2;i++)m.move(i,add(m.vectors[i],basis(n,0,2)));assert.deepEqual(m.vectors,before);assert.deepEqual(dragSpace(m,0),[]);}});
+test('geometric product Fix value couples both points in the original wedge plane',()=>{
+  for(const n of [3,4])for(const type of ['geometric','projective-product'])for(const moving of [0,1]){
+    const m=new FigureModel(definition(type),n),algebra=m.alg,original=structuredClone(m.vectors),product=algebra.gp(...original.map(vector=>algebra.vector(vector))),blade=algebra.blade(original);
+    const normProduct=original.reduce((value,vector)=>value*algebra.inner(algebra.vector(vector),algebra.vector(vector)),1);
+    m.update('fix',true);const frame=dragSpace(m,moving);assert.equal(frame.length,2);
+    for(let step=0;step<120;step++){
+      const angle=step*.025,size=1+.35*Math.sin(step*.11),request=scale(add(scale(frame[0],Math.cos(angle)),scale(frame[1],Math.sin(angle))),size);
+      m.move(moving,request);
+      assert.ok(length(sub(algebra.gp(...m.vectors.map(vector=>algebra.vector(vector))),product))<1e-8);
+      for(const vector of m.vectors)assert.ok(length(algebra.wedge(algebra.vector(vector),blade))<1e-8);
+      near(m.vectors.reduce((value,vector)=>value*algebra.inner(algebra.vector(vector),algebra.vector(vector)),1),normProduct);
+    }
+    assert.ok(length(sub(m.vectors[1-moving],original[1-moving]))>.05);
+    const before=structuredClone(m.vectors);m.move(moving,Array(n).fill(0));assert.deepEqual(m.vectors,before);
+    if(type==='projective-product'){assert.equal(m.state.lockWeight,true);assert.ok(Math.abs(m.vectors[moving][n-1]-1)>.01);m.update('fix',false);assert.ok(dragSpace(m,moving).every(axis=>Math.abs(axis[n-1])<1e-8));}
+  }
+});
+test('fixed-product projected dragging follows an oblique plane in both camera modes',()=>{
+  for(const n of [3,4])for(const type of ['geometric','projective-product'])for(const perspective of [false,true]){
+    const m=new FigureModel(definition(type),n),view={...defaultView(n),perspective,extra:.9},project=point=>screenPoint(point,view,n,false,800,500,65);
+    m.update('fix',true);const before=project(m.vectors[0]),next=dragOnSurface(project,m.vectors[0],4,-3,dragSpace(m,0),point=>point);m.move(0,next);const after=project(m.vectors[0]);near(after.x-before.x,4,.03);near(after.y-before.y,-3,.03);
+  }
+});
+test('fixed-product collinear and null inputs stay finite and preserve the product',()=>{
+  for(const type of ['geometric','projective-product'])for(const vectors of [[[1,0,0],[2,0,0]],[[0,0,0],[1,1,1]],[[0,0,1],[1,0,1]]]){
+    const m=new FigureModel(definition(type),3);m.vectors=structuredClone(vectors);m.update('fix',true);const product=m.alg.gp(...m.vectors.map(vector=>m.alg.vector(vector)));
+    m.move(0,[.4,.2,.7]);assert.ok(m.vectors.flat().every(Number.isFinite));assert.ok(length(sub(m.alg.gp(...m.vectors.map(vector=>m.alg.vector(vector))),product))<1e-8);
+  }
+});
 test('input wedges retain actual edges, and trivector color is independent of left orbit',()=>{for(const n of [3,4]){const m=new FigureModel(definition('trivector'),n),scene=Object.assign(Object.create(Scene.prototype),{n,commands:[],labels:[],handles:[],view:defaultView(n)});m.paint(scene);const before=scene.commands.filter(c=>c.kind==='poly').map(c=>c.color);orbit(scene.view,n,false,130,280);scene.commands=[];scene.labels=[];scene.handles=[];m.paint(scene);assert.deepEqual(scene.commands.filter(c=>c.kind==='poly').map(c=>c.color),before);m.update('order',1);scene.commands=[];m.paint(scene);assert.notEqual(scene.commands.find(c=>c.kind==='poly').color,before[0]);}});
 test('line weight normalization and parallel meet preserve the geometric objects',()=>{for(const n of [3,4]){const line=chapters.flatMap(c=>c.figures).find(f=>f.id==='line'),m=new FigureModel(line,n),A=m.alg,original=A.blade(m.vectors);m.update('unitLineWeight');near(A.weightNorm(A.blade(m.vectors)),1);for(const v of m.vectors)assert.ok(length(A.wedge(A.vector(v),original))<1e-6);const meet=new FigureModel(definition('meet'),n);meet.update('parallel');const x=meet.alg.blade(meet.vectors.slice(0,n-1)),y=meet.alg.blade(meet.vectors.slice(n-1)),out=meet.alg.antiwedge(x,y);assert.ok(length(out)>1e-5);near(length(meet.alg.weight(out)),0);}});
 test('skew-line distance agrees with the closest segment',()=>{const m=new FigureModel(definition('distance'),4);m.update('case',3);m.vectors=[[0,0,0,1],[1,0,0,1],[0,0,2,1],[0,1,2,1]];const scene=Object.assign(Object.create(Scene.prototype),{n:4,commands:[],labels:[],handles:[],view:defaultView(4)});m.paint(scene);near(m.rows.find(x=>x.label==='Distance').value,2);const d=scene.commands.find(c=>c.color==='#e28a42'&&c.kind==='line'&&c.width===2);near(length(sub(d.points[0],d.points[1])),2);});

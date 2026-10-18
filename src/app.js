@@ -4,7 +4,7 @@ import { Algebra, basis, formatMV, indicesBlade, basisOrder } from './algebra.js
 import { Scene } from './scene.js';
 import { FigureModel } from './figures.js';
 import { isFreeRoundPoint } from './advanced-revisions.js';
-import { activeInputs } from './lesson-revisions.js';
+import { activeInputs, fixedProduct } from './lesson-revisions.js';
 import { defaultView } from './camera.js';
 import { mathTokens,drawMath,measureMath } from './math-label.js';
 const $=s=>document.querySelector(s),params=new URLSearchParams(location.search),slug=location.pathname.split('/').pop()?.replace(/\.html$/,'');
@@ -24,6 +24,7 @@ function navigation(){let group='';$('#navigation').replaceChildren();chapters.f
 function renderControls(mount){
   const {model,side}=mount;side.replaceChildren();
   for(const spec of model.controls){
+    if(spec.key==='lockWeight'&&fixedProduct(model))continue;
     if(spec.key.startsWith('pointRadius')&&(!model.state.pointOnly||+spec.key.slice(-1)>=model.vectors.length))continue;
     if(model.def.type==='cga-join'&&model.state.pointOnly&&['flatA','flatB','radiusA','radiusB'].includes(spec.key))continue;
     if(spec.key==='radius2'&&model.def.type==='cga-property'&&+model.state.grade!==1)continue;
@@ -45,8 +46,7 @@ function renderControls(mount){
     v.forEach((value,j)=>{const label=el('label','',['x','y','z','w','u'][j]),input=el('input');input.type='number';input.step='.05';input.value=Number(value.toFixed(2));input.dataset.vector=i;input.dataset.coordinate=j;input.setAttribute('aria-label',`${model.names[i]} ${['x','y','z','w','u'][j]}`);
       if(model.cga&&!isFreeRoundPoint(model,i)&&!(model.def.type==='conformal-transform'&&i>=+model.state.objectGrade)&&j>=model.n-2){input.readOnly=true;input.title='Null point · dependent coordinate';}
       if(model.def.type==='null'&&j===1){input.readOnly=true;input.title='Null-cone section';}
-      if(model.state.lockWeight&&!model.cga&&j===model.n-1){input.readOnly=true;input.title='Unit slice · fixed weight';}
-      if(model.state.fix&&['geometric','projective-product'].includes(model.def.type))input.disabled=true;
+      if(model.state.lockWeight&&!model.cga&&!fixedProduct(model)&&j===model.n-1){input.readOnly=true;input.title='Unit slice · fixed weight';}
       const edit=()=>{const val=input.valueAsNumber;if(!Number.isFinite(val))return;const next=[...model.vectors[i]];next[j]=Math.max(-6,Math.min(6,val));model.move(i,next);mount.scene.render();if(input!==document.activeElement)input.value=Number(model.vectors[i][j].toFixed(2));};input.addEventListener('input',edit);input.addEventListener('change',edit);label.append(input);grid.append(label);});block.append(grid);side.append(block);
   });
   mount.result=el('div','result');side.append(mount.result);
