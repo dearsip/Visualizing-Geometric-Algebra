@@ -51,6 +51,7 @@ function roundSeed(m,k,side){if(m.def.type==='cga-expansion'&&k===1&&!side)retur
 function setPair(m){m.grades=String(m.state.pair).split(':').map(Number);const [a,b]=m.grades;if(m.cga){m.vectors=[...roundSeed(m,a,0),...roundSeed(m,b,1)];const labels=['p','q','r','t'];m.names=[...labels.slice(0,a).map(x=>x+'₁'),...labels.slice(0,b).map(x=>x+'₂')];}else{m.setVectors(a+b,'point');m.names=m.vectors.map((_,i)=>['p','q','r','s','t','v','w','k'][i]);if(m.def.type==='projection'){let next=0;const letters=a===1||b===1?['q','r','s','t','v']:['p','q','r','s','t'];m.names=m.grades.flatMap(k=>k===1?['p']:Array.from({length:k},()=>letters[next++]));}}m.frames?.clear();}
 export function update(m,key,value){
   const t=m.def.type,n=m.n,h=n-1;
+  if(key==='fix'&&t==='projective-product'&&!value&&m.state.lockWeight){for(let index=0;index<m.vectors.length;index++){const weight=m.vectors[index][h];if(Math.abs(weight)>EPS)m.vectors[index]=scale(m.vectors[index],1/weight);}}
   if(key==='infinity')m.state.lockWeight=false;
   if(key==='operation'&&t==='interior'){m.state.operation=value;m.names=+value>=2?['q','r','s']:['p','q','r'];return true;}
   if(key==='grade'&&['cga-property','containment'].includes(t)){m.state.grade=+value;m.vectors=[...(t==='containment'?[embed([-.4,.6,...(n===5?[.3]:[])],n)]:[]),...roundSeed(m,+value,0)];m.names=m.vectors.map((_,i)=>['p','q','r','t','v'][i]);if(t==='containment')m.names[0]='p₀';return true;}
@@ -82,7 +83,7 @@ export function dragSpace(m,i){
   if(m.state.lockWeight)frame=restrict(frame,h);return frame;
 }
 function restrict(frame,index){const row=frame.map(v=>v[index]);if(length(row)<EPS)return frame;const coefficientSpace=perpendicularFrame(row);return coefficientSpace.map(coefs=>frame.reduce((s,v,i)=>add(s,scale(v,coefs[i])),zero(frame[0].length)));}
-export const fixedProduct=m=>m.state.fix&&['geometric','projective-product'].includes(m.def.type);
+export const fixedProduct=model=>model.state.fix&&['geometric','projective-product'].includes(model.def.type);
 export function move(m,i,next){
   const t=m.def.type,n=m.n,old=m.vectors[i];if(!old)return true;
   if(m.state.fix||m.state.lockWeight){const space=dragSpace(m,i),delta=sub(next,old);next=add(old,space.reduce((s,v)=>add(s,scale(v,dot(v,delta)/(dot(v,v)||1))),zero(n)));}

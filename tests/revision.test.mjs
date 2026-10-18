@@ -73,7 +73,7 @@ test('geometric product Fix value couples both points in the original wedge plan
     }
     assert.ok(length(sub(m.vectors[1-moving],original[1-moving]))>.05);
     const before=structuredClone(m.vectors);m.move(moving,Array(n).fill(0));assert.deepEqual(m.vectors,before);
-    if(type==='projective-product'){assert.equal(m.state.lockWeight,true);assert.ok(Math.abs(m.vectors[moving][n-1]-1)>.01);m.update('fix',false);assert.ok(dragSpace(m,moving).every(axis=>Math.abs(axis[n-1])<1e-8));}
+    if(type==='projective-product'){assert.equal(m.state.lockWeight,true);assert.ok(Math.abs(m.vectors[moving][n-1]-1)>.01);m.update('fix',false);for(const vector of m.vectors)near(vector[n-1],1);assert.ok(dragSpace(m,moving).every(axis=>Math.abs(axis[n-1])<1e-8));}
   }
 });
 test('fixed-product projected dragging follows an oblique plane in both camera modes',()=>{
