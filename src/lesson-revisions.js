@@ -228,8 +228,8 @@ function paintSandwich(m,scene){
   if(!anti){
     if(s.shading)displacementShading(scene,vs[0],vs[1]);
     if(k===1){scene.blade([vs[0],vs[1]],'a ⟑ v₀',{color:colors.a,alpha:.1});scene.blade([outputs[0],vs[0]],'v₁ ⟑ a = a ⟑ v₀',{color:colors.result,alpha:.1});}
-    const normal=A.coordinates(A.metricMap(av)),eu=new Algebra(n),fixed=eu.lc(eu.vector(normal));scene.flat(fixed,A,'fixed hyperplane',colors.green);const fixedPoint=affine(vs[0]);if(fixedPoint)scene.point(fixedPoint,hat('a'),colors.green);
-    if(q>EPS){const infNormal=basis(n,h);for(let i=0;i<h;i++)infNormal[i]=-2*vs[0][h]*vs[0][i]/q;scene.flat(eu.lc(eu.vector(infNormal)),A,'sent to infinity',colors.purple);}
+    const normal=A.coordinates(A.metricMap(av)),eu=new Algebra(n),fixed=eu.lc(eu.vector(normal));scene.flat(fixed,A,'',colors.green);const fixedPoint=affine(vs[0]);if(fixedPoint)scene.point(fixedPoint,hat('a'),colors.green);
+    if(q>EPS){const infNormal=basis(n,h);for(let i=0;i<h;i++)infNormal[i]=-2*vs[0][h]*vs[0][i]/q;scene.flat(eu.lc(eu.vector(infNormal)),A,'',colors.purple);}
     if(s.orbit)projectiveSurface(scene,vs[0],vs[1]);
     m.formula=V(outLabel)+' = '+V('a')+' '+GP+' '+V(inLabel)+' '+GP+' '+V('a')+'<sup>−1</sup>';
   }else{

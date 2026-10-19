@@ -116,7 +116,7 @@ export class Scene {
     let p=scale(fs[pivot],1/fs[pivot][h]);const dirs=this.orthonormal(fs.filter((_,i)=>i!==pivot).map(f=>sub(f,scale(fs[pivot],f[h]/fs[pivot][h]))));
     for(const d of dirs)p=sub(p,scale(d,dot(p,d)));
     const spatial=p.slice(0,h);const radius2=r*r-dot(spatial,spatial);
-    if(radius2<0){this.label(Z(this.n),`${text}: outside view`,color,{dy:24,size:10});return;}
+    if(radius2<0){if(text)this.label(Z(this.n),`${text}: outside view`,color,{dy:24,size:10});return;}
     const radius=Math.sqrt(radius2);
     if(dirs.length===0)this.point(p,text,color,5);
     else if(dirs.length===1){this.line(add(p,scale(dirs[0],-radius)),add(p,scale(dirs[0],radius)),color,2);this.label(add(p,scale(dirs[0],radius*.65)),text,color,{dy:-10,box:true});}

@@ -13,6 +13,21 @@ import { mathTokens } from '../src/math-label.js';
 const near=(a,b,t=1e-6)=>assert.ok(Math.abs(a-b)<t,`${a} != ${b}`);
 const definition=type=>chapters.flatMap(c=>c.figures).find(d=>d.type===type);
 
+test('projective sandwich keeps fixed and infinity loci without their descriptive labels',()=>{
+  for(const dimension of [3,4]){
+    const model=new FigureModel(definition('projective'),dimension);
+    const scene=Object.assign(Object.create(Scene.prototype),{n:dimension,commands:[],labels:[],handles:[],factorFrames:new Map(),view:defaultView(dimension),flatGeometry:true});
+    const loci=[];scene.flat=function(blade,algebra,text,color,options){loci.push(text);Scene.prototype.flat.call(this,blade,algebra,text,color,options);};
+    for(const moved of [false,true]){
+      if(moved)model.move(0,model.vectors[0].map((value,axis)=>axis===dimension-1?5:value));
+      loci.length=0;scene.labels.length=0;model.paint(scene);
+      assert.ok(loci.filter(text=>text==='').length>=2);
+      assert.ok(!scene.labels.some(label=>/fixed hyperplane|sent to infinity|^: outside view/.test(label.text)));
+      assert.ok(scene.commands.length>20);
+    }
+  }
+});
+
 test('reflection product parallelograms show matching source and image angle arcs',()=>{
   for(const dimension of [3,4]){
     const model=new FigureModel(definition('reflection'),dimension);
