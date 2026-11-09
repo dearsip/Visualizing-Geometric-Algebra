@@ -134,7 +134,15 @@ export class Scene {
       this.label(add(scale(axis,1.8),scale(frame[0],1.8)),'Null Cone',colors.green,{dy:-18});
     }
     for(const axis of axes){let previous;for(let x=-2.3;x<=2.301;x+=.07){const v=Array(m).fill(0);v[axis]=x;const p=point(v);if(previous)this.line(previous,p,colors.purple,section?1.8:.95,false,.65);previous=p;}}
-    if(!(section&&this.n===4))for(let fixed=-1.6;fixed<=1.6;fixed+=.8)for(let swap=0;swap<2;swap++){let prev;for(let x=-2;x<=2.001;x+=.12){const v=Array(m).fill(0);v[axes[swap]]=x;v[axes[1-swap]]=fixed;const p=point(v);if(prev)this.line(prev,p,colors.purple,.65,true,.3);prev=p;}}
+    // Lift the whole spatial lattice, not only its first coordinate plane.
+    // In 3D each curve fixes two independent coordinates before bending along e_n.
+    if(axes.length>1)for(let offset=-2;offset<=2;offset++)for(let axis=0;axis<axes.length;axis++)for(let depth=axes.length===3?-2:0;depth<=(axes.length===3?2:0);depth++){
+      let prev;for(let x=-2;x<=2.001;x+=.12){
+        const v=Array(m).fill(0);v[axes[axis]]=x;v[axes[(axis+1)%axes.length]]=offset*.8;
+        if(axes.length===3)v[axes[(axis+2)%axes.length]]=depth*.8;
+        const p=point(v);if(prev)this.line(prev,p,colors.purple,.65,true,.3);prev=p;
+      }
+    }
     const center=basis(this.n,w);if(section)this.disk(center,[basis(this.n,0),basis(this.n,u)],2.7,'#c3af52',.025,true);else if(this.n===4)this.disk(center,[basis(this.n,0),basis(this.n,1)],2.7,'#c3af52',.025,true);else this.sphere(center,2.7,'#c3af52',true,.3,null,{mesh:true});
     if(section)this.label(point([-1.5,...Array(m-1).fill(0)]),'Horosphere',colors.purple,{dy:-18});
   }

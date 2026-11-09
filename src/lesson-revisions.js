@@ -251,6 +251,7 @@ function paintConformal(m,scene){
     inputs(m,scene);let u=t==='roundpoint'?A.vector(vs[0]):A.blade(s.flat?[...vs.slice(0,-1),basis(n,n-1)]:vs),label=t==='roundpoint'?'a':objectSymbol(A.gradeOf(u),s.flat),info=cgaRound(u,A),prop=cgaProperties(u,A);
     if(t==='roundpoint'){m.formula=`${V('a')} / a<sub>${n===4?'z':'w'}</sub> = ${V('x')} + ${E(n-1)} + ½(|${V('x')}|² + r²)${E(n)}`;if(Math.abs(vs[0][n-2])<EPS)m.status=length(vs[0].slice(0,n-2))<EPS&&Math.abs(vs[0][n-1])>EPS?'Point at infinity':'Zero round weight · no finite centre';}
     if(t==='round'&&s.flat)scene.arrow(basis(n,n-1),m.names.at(-1)+' = e_{'+n+'}',colors.infinity);
+    if(t==='round'&&s.flat&&m.def.grade===2)scene.locusLine(vs[0],basis(n,n-1),colors.result);
     if(t==='round')m.formula=`${V(label)} = ${m.names.map(V).join(' ∧ ')}${s.flat?`,　${V(m.names.at(-1))} = ${E(n)}`:''}`;
     if(t==='cga-property'){m.formula=m.def.formula.replaceAll(V('u'),V(label)).replace(/(<span class="mv">)u/g,`$1${label}`).replaceAll(E('n'),E(n));if(m.def.property==='attitude')m.formula=`att(${V(label)}) = ${V(label)} ∨ <span class="right-complement">${E(n-1)}</span>`;}
     if(t==='roundpoint'){roundPointConstruction(m,scene,embeddedRound);m.row('a',m.mv(u));return true;}
